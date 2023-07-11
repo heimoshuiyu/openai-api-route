@@ -46,7 +46,7 @@ func main() {
 	}
 
 	db.AutoMigrate(&OPENAI_UPSTREAM{})
-	db.AutoMigrate(&UserMessage{})
+	db.AutoMigrate(&RequestRecord{})
 	log.Println("Auto migrate database done")
 
 	if *addMode {
@@ -306,18 +306,18 @@ func main() {
 			"message": "success",
 		})
 	})
-	engine.GET("/admin/user_messages", func(c *gin.Context) {
+	engine.GET("/admin/request_records", func(c *gin.Context) {
 		// check authorization headers
 		if handleAuth(c) != nil {
 			return
 		}
-		userMessages := []UserMessage{}
-		err := db.Order("id desc").Limit(100).Find(&userMessages).Error
+		requestRecords := []RequestRecord{}
+		err := db.Order("id desc").Limit(100).Find(&requestRecords).Error
 		if err != nil {
 			c.AbortWithError(502, err)
 			return
 		}
-		c.JSON(200, userMessages)
+		c.JSON(200, requestRecords)
 	})
 	engine.Run(*listenAddr)
 }
