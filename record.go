@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -15,5 +17,8 @@ func recordUserMessage(c *gin.Context, db *gorm.DB, body []byte) {
 	requestRecord := RequestRecord{
 		Body: bodyStr,
 	}
-	db.Create(&requestRecord)
+	err := db.Create(&requestRecord).Error
+	if err != nil {
+		log.Println("Error record request:", err)
+	}
 }
