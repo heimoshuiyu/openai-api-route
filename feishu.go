@@ -26,7 +26,7 @@ func sendFeishuMessage(content string) error {
 	if err != nil {
 		log.Println("Failed to send feishu message", err)
 	}
-	FEISHU_WEBHOOK := os.Getenv("FEISHU_WEBOOK")
+	FEISHU_WEBHOOK := os.Getenv("FEISHU_WEBHOOK")
 	if FEISHU_WEBHOOK == "" {
 		log.Println("FEISHU_WEBOOK environment not set")
 		return nil
