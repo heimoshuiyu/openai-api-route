@@ -187,11 +187,6 @@ func main() {
 			// abort to error handle
 			c.AbortWithError(502, err)
 
-			// count failed
-			if err.Error() != "context canceled" {
-				go db.Model(&upstream).Update("failed_count", gorm.Expr("failed_count + ?", 1))
-			}
-
 			// send notification
 			upstreams := []OPENAI_UPSTREAM{}
 			db.Find(&upstreams)
@@ -207,7 +202,9 @@ func main() {
 				strings.Join(upstreamDescriptions, "\n"),
 			)
 			go sendMatrixMessage(content)
-			if err.Error() != "context canceled" {
+			if err.Error() != "context canceled" && r.Response.StatusCode != 400 {
+				// count failed
+				go db.Model(&upstream).Update("failed_count", gorm.Expr("failed_count + ?", 1))
 				go sendFeishuMessage(content)
 			}
 
