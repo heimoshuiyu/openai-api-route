@@ -89,6 +89,9 @@ func main() {
 		})
 	})
 
+	// CORS handler
+	engine.Use(corsMiddleware())
+
 	// get authorization config from db
 	db.Take(&authConfig, "key = ?", "authorization")
 
