@@ -65,8 +65,8 @@ func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID,
 	// stream mode
 	if strings.HasPrefix(contentType, "text/event-stream") {
 		resp := string(body)
-		var chunk StreamModeChunk
 		for _, line := range strings.Split(resp, "\n") {
+			chunk := StreamModeChunk{}
 			line = strings.TrimPrefix(line, "data:")
 			line = strings.TrimSpace(line)
 			if line == "" {
