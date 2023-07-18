@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	db.AutoMigrate(&OPENAI_UPSTREAM{})
-	db.AutoMigrate(&RequestRecord{})
+	db.AutoMigrate(&Record{})
 	log.Println("Auto migrate database done")
 
 	if *addMode {
@@ -96,6 +97,7 @@ func main() {
 	db.Take(&authConfig, "key = ?", "authorization")
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
+		trackID := uuid.New()
 		// check authorization header
 		if !*noauth {
 			if handleAuth(c) != nil {
@@ -156,7 +158,7 @@ func main() {
 			}
 
 			// record chat message from user
-			go recordUserMessage(c, db, body)
+			go recordUserMessage(c, db, trackID, body)
 
 			out.Body = io.NopCloser(bytes.NewReader(body))
 
@@ -169,6 +171,8 @@ func main() {
 			out.Header.Set("Authorization", "Bearer "+upstream.SK)
 			out.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
 		}
+		var buf bytes.Buffer
+		var contentType string
 		proxy.ModifyResponse = func(r *http.Response) error {
 			if r.StatusCode != 200 {
 				body, err := io.ReadAll(r.Body)
@@ -182,6 +186,8 @@ func main() {
 				"success_count":          gorm.Expr("success_count + ?", 1),
 				"last_call_success_time": time.Now(),
 			})
+			r.Body = io.NopCloser(io.TeeReader(r.Body, &buf))
+			contentType = r.Header.Get("content-type")
 			return nil
 		}
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
@@ -214,6 +220,11 @@ func main() {
 			log.Println("response is", r.Response)
 		}
 		proxy.ServeHTTP(c.Writer, c.Request)
+		resp, err := io.ReadAll(io.NopCloser(&buf))
+		if err != nil {
+			log.Println("Failed to read from response tee buffer", err)
+		}
+		go recordAssistantResponse(contentType, db, trackID, resp)
 	})
 
 	// ---------------------------------
@@ -311,7 +322,7 @@ func main() {
 		if handleAuth(c) != nil {
 			return
 		}
-		requestRecords := []RequestRecord{}
+		requestRecords := []Record{}
 		err := db.Order("id desc").Limit(100).Find(&requestRecords).Error
 		if err != nil {
 			c.AbortWithError(502, err)
