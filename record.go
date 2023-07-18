@@ -83,7 +83,6 @@ func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID,
 				continue
 			}
 			result += chunk.Choices[0].Delta.Content
-			log.Println(line)
 		}
 	} else if strings.HasPrefix(contentType, "application/json") {
 		var fetchResp FetchModeResponse
