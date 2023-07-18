@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -11,10 +12,10 @@ import (
 )
 
 type Record struct {
-	gorm.Model
-	ID       uuid.UUID `gorm:"type:uuid"`
-	Body     string
-	Response string
+	ID        uuid.UUID `gorm:"type:uuid"`
+	CreatedAt time.Time
+	Body      string
+	Response  string
 }
 
 func recordUserMessage(c *gin.Context, db *gorm.DB, trackID uuid.UUID, body []byte) {
