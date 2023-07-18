@@ -26,7 +26,7 @@ func initconfig(db *gorm.DB) error {
 	// config list and their default values
 	configs := make(map[string]string)
 	configs["authorization"] = "woshimima"
-	configs["policy"] = "random"
+	configs["policy"] = "main"
 
 	for key, value := range configs {
 		kv := ConfigKV{}
