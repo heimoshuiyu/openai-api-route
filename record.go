@@ -14,6 +14,7 @@ import (
 type Record struct {
 	ID        uuid.UUID `gorm:"type:uuid"`
 	CreatedAt time.Time
+	IP        string
 	Body      string
 	Response  string
 }
@@ -23,6 +24,7 @@ func recordUserMessage(c *gin.Context, db *gorm.DB, trackID uuid.UUID, body []by
 	requestRecord := Record{
 		Body: bodyStr,
 		ID:   trackID,
+		IP:   c.ClientIP(),
 	}
 	err := db.Create(&requestRecord).Error
 	if err != nil {
