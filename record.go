@@ -94,7 +94,7 @@ func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID,
 			return
 		}
 		if !strings.HasPrefix(fetchResp.Model, "gpt-") {
-			log.Println("Not GPT model, skip recording response")
+			log.Println("Not GPT model, skip recording response:", fetchResp.Model)
 			return
 		}
 		if len(fetchResp.Choices) == 0 {
