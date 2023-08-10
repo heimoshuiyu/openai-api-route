@@ -12,11 +12,12 @@ import (
 )
 
 type Record struct {
-	ID        uuid.UUID `gorm:"type:uuid"`
-	CreatedAt time.Time
-	IP        string
-	Body      string
-	Response  string
+	ID          uuid.UUID `gorm:"type:uuid"`
+	CreatedAt   time.Time
+	IP          string
+	Body        string
+	Response    string
+	ElapsedTime time.Duration
 }
 
 func recordUserMessage(c *gin.Context, db *gorm.DB, trackID uuid.UUID, body []byte) {
@@ -62,7 +63,7 @@ type FetchModeUsage struct {
 	TotalTokens      int64 `json:"total_tokens"`
 }
 
-func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID, body []byte) {
+func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID, body []byte, elapsedTime time.Duration) {
 	result := ""
 	// stream mode
 	if strings.HasPrefix(contentType, "text/event-stream") {
@@ -113,6 +114,7 @@ func recordAssistantResponse(contentType string, db *gorm.DB, trackID uuid.UUID,
 		return
 	}
 	record.Response = result
+	record.ElapsedTime = elapsedTime
 	if db.Save(&record).Error != nil {
 		log.Println("Error to save record:", record)
 		return

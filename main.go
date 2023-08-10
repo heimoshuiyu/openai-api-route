@@ -97,6 +97,7 @@ func main() {
 	db.Take(&authConfig, "key = ?", "authorization")
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
+		begin := time.Now()
 		trackID := uuid.New()
 		// check authorization header
 		if !*noauth {
@@ -224,7 +225,7 @@ func main() {
 		if err != nil {
 			log.Println("Failed to read from response tee buffer", err)
 		}
-		go recordAssistantResponse(contentType, db, trackID, resp)
+		go recordAssistantResponse(contentType, db, trackID, resp, time.Now().Sub(begin))
 	})
 
 	// ---------------------------------
