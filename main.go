@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -228,108 +227,5 @@ func main() {
 		go recordAssistantResponse(contentType, db, trackID, resp, time.Now().Sub(begin))
 	})
 
-	// ---------------------------------
-	// admin APIs
-	engine.POST("/admin/login", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.GET("/admin/upstreams", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		upstreams := make([]OPENAI_UPSTREAM, 0)
-		db.Find(&upstreams)
-		c.JSON(200, upstreams)
-	})
-	engine.POST("/admin/upstreams", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		newUpstream := OPENAI_UPSTREAM{}
-		err := c.BindJSON(&newUpstream)
-		if err != nil {
-			c.AbortWithError(502, errors.New("can't parse OPENAI_UPSTREAM object"))
-			return
-		}
-		if newUpstream.SK == "" || newUpstream.Endpoint == "" {
-			c.AbortWithError(403, errors.New("can't create new OPENAI_UPSTREAM with empty sk or endpoint"))
-			return
-		}
-		log.Println("Saveing new OPENAI_UPSTREAM", newUpstream)
-		err = db.Create(&newUpstream).Error
-		if err != nil {
-			c.AbortWithError(403, err)
-			return
-		}
-	})
-	engine.DELETE("/admin/upstreams/:id", func(ctx *gin.Context) {
-		// check authorization headers
-		if handleAuth(ctx) != nil {
-			return
-		}
-		id, err := strconv.Atoi(ctx.Param("id"))
-		if err != nil {
-			ctx.AbortWithError(502, err)
-			return
-		}
-		upstream := OPENAI_UPSTREAM{}
-		upstream.ID = uint(id)
-		db.Delete(&upstream)
-		ctx.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.PUT("/admin/upstreams/:id", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		upstream := OPENAI_UPSTREAM{}
-		err := c.BindJSON(&upstream)
-		if err != nil {
-			c.AbortWithError(502, errors.New("can't parse OPENAI_UPSTREAM object"))
-			return
-		}
-		if upstream.SK == "" || upstream.Endpoint == "" {
-			c.AbortWithError(403, errors.New("can't create new OPENAI_UPSTREAM with empty sk or endpoint"))
-			return
-		}
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			c.AbortWithError(502, err)
-			return
-		}
-		upstream.ID = uint(id)
-		log.Println("Saveing new OPENAI_UPSTREAM", upstream)
-		err = db.Create(&upstream).Error
-		if err != nil {
-			c.AbortWithError(403, err)
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.GET("/admin/request_records", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		requestRecords := []Record{}
-		err := db.Order("id desc").Limit(100).Find(&requestRecords).Error
-		if err != nil {
-			c.AbortWithError(502, err)
-			return
-		}
-		c.JSON(200, requestRecords)
-	})
 	engine.Run(*listenAddr)
 }
