@@ -100,6 +100,12 @@ func main() {
 			IP:        c.ClientIP(),
 			CreatedAt: time.Now(),
 		}
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("Error:", err)
+				c.AbortWithError(500, fmt.Errorf("%s", err))
+			}
+		}()
 
 		// check authorization header
 		if !*noauth {
@@ -221,7 +227,16 @@ func main() {
 
 			log.Println("response is", r.Response)
 		}
-		proxy.ServeHTTP(c.Writer, c.Request)
+
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("Panic recover :", err)
+				}
+			}()
+			proxy.ServeHTTP(c.Writer, c.Request)
+		}()
+
 		resp, err := io.ReadAll(io.NopCloser(&buf))
 		if err != nil {
 			record.Response = "failed to read response from upstream " + err.Error()
