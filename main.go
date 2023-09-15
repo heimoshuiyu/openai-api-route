@@ -90,7 +90,13 @@ func main() {
 	})
 
 	// CORS handler
-	engine.Use(handleCORS)
+	engine.OPTIONS("/v1/*any", func(ctx *gin.Context) {
+		header := ctx.Writer.Header()
+		header.Set("Access-Control-Allow-Origin", "*")
+		header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+		header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+		ctx.AbortWithStatus(200)
+	})
 
 	// get authorization config from db
 	db.Take(&authConfig, "key = ?", "authorization")
@@ -186,6 +192,13 @@ func main() {
 		var contentType string
 		proxy.ModifyResponse = func(r *http.Response) error {
 			record.Status = r.StatusCode
+			r.Header.Del("Access-Control-Allow-Origin")
+			r.Header.Del("Access-Control-Allow-Methods")
+			r.Header.Del("Access-Control-Allow-Headers")
+			r.Header.Set("Access-Control-Allow-Origin", "*")
+			r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+			r.Header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+
 			if r.StatusCode != 200 {
 				body, err := io.ReadAll(r.Body)
 				if err != nil {
