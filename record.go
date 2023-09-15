@@ -6,31 +6,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Record struct {
-	ID          uuid.UUID `gorm:"type:uuid"`
+	ID          int64 `gorm:"primaryKey,autoIncrement"`
 	CreatedAt   time.Time
 	IP          string
-	Body        string
+	Body        string `gorm:"serializer:json"`
 	Response    string
 	ElapsedTime time.Duration
-}
-
-func recordUserMessage(c *gin.Context, db *gorm.DB, trackID uuid.UUID, body []byte) {
-	bodyStr := string(body)
-	requestRecord := Record{
-		Body: bodyStr,
-		ID:   trackID,
-		IP:   c.ClientIP(),
-	}
-	err := db.Create(&requestRecord).Error
-	if err != nil {
-		log.Println("Error record request:", err)
-	}
+	Status      int
+	UpstreamID  uint
 }
 
 type StreamModeChunk struct {
