@@ -185,7 +185,11 @@ func main() {
 			out.URL.Path = in.URL.Path
 			out.Header = http.Header{}
 			out.Header.Set("Host", remote.Host)
-			out.Header.Set("Authorization", "Bearer "+upstream.SK)
+			if upstream.SK == "asis" {
+				out.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+			} else {
+				out.Header.Set("Authorization", "Bearer "+upstream.SK)
+			}
 			out.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
 		}
 		var buf bytes.Buffer
@@ -230,7 +234,7 @@ func main() {
 			}
 			content := fmt.Sprintf("[%s] OpenAI 转发出错 ID: %d... 密钥: [%s] 上游: [%s] 错误: %s\n---\n%s",
 				c.ClientIP(),
-				upstream.ID, upstream.SK[:10], upstream.Endpoint, err.Error(),
+				upstream.ID, upstream.SK, upstream.Endpoint, err.Error(),
 				strings.Join(upstreamDescriptions, "\n"),
 			)
 			go sendMatrixMessage(content)
