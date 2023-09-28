@@ -231,8 +231,8 @@ func main() {
 				c.ClientIP(),
 				upstream.ID, upstream.SK, upstream.Endpoint, err.Error(),
 			)
-			go sendMatrixMessage(content)
 			if err.Error() != "context canceled" && r.Response.StatusCode != 400 {
+				go sendMatrixMessage(content)
 				go sendFeishuMessage(content)
 			}
 
