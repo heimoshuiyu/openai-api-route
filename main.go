@@ -67,9 +67,9 @@ func main() {
 	if *listMode {
 		result := make([]OPENAI_UPSTREAM, 0)
 		db.Find(&result)
-		fmt.Println("SK\tEndpoint\tSuccess\tFailed\tLast Success Time")
+		fmt.Println("SK\tEndpoint")
 		for _, upstream := range result {
-			fmt.Println(upstream.SK, upstream.Endpoint, upstream.SuccessCount, upstream.FailedCount, upstream.LastCallSuccessTime)
+			fmt.Println(upstream.SK, upstream.Endpoint)
 		}
 		return
 	}
@@ -227,16 +227,9 @@ func main() {
 			// send notification
 			upstreams := []OPENAI_UPSTREAM{}
 			db.Find(&upstreams)
-			upstreamDescriptions := make([]string, 0)
-			for _, upstream := range upstreams {
-				upstreamDescriptions = append(upstreamDescriptions, fmt.Sprintf("ID: %d, %s: %s 成功次数: %d, 失败次数: %d, 最后成功调用: %s",
-					upstream.ID, upstream.SK, upstream.Endpoint, upstream.SuccessCount, upstream.FailedCount, upstream.LastCallSuccessTime,
-				))
-			}
-			content := fmt.Sprintf("[%s] OpenAI 转发出错 ID: %d... 密钥: [%s] 上游: [%s] 错误: %s\n---\n%s",
+			content := fmt.Sprintf("[%s] OpenAI 转发出错 ID: %d... 密钥: [%s] 上游: [%s] 错误: %s",
 				c.ClientIP(),
 				upstream.ID, upstream.SK, upstream.Endpoint, err.Error(),
-				strings.Join(upstreamDescriptions, "\n"),
 			)
 			go sendMatrixMessage(content)
 			if err.Error() != "context canceled" && r.Response.StatusCode != 400 {
