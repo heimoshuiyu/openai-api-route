@@ -103,8 +103,9 @@ func main() {
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
 		record := Record{
-			IP:        c.ClientIP(),
-			CreatedAt: time.Now(),
+			IP:            c.ClientIP(),
+			CreatedAt:     time.Now(),
+			Authorization: c.Request.Header.Get("Authorization"),
 		}
 		defer func() {
 			if err := recover(); err != nil {

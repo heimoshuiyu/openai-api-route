@@ -22,7 +22,7 @@
 
    这将会编译代码并生成可执行文件。
 
-5. 编译成功后，您可以直接运行以下命令来启动负载均衡和能力 API：
+5. 编译成功后，您可以直接运行以下命令来启动负载均衡 API：
 
    ```
    ./openai-api-route
@@ -85,6 +85,7 @@ Usage of ./openai-api-route:
 您也可以使用 `/admin/upstreams` 的 HTTP 接口进行控制。
 
 另外，您还可以直接编辑数据库中的 `openai_upstreams` 表。
+
 ## 身份验证
 
 ### 身份验证中间件流程
@@ -99,81 +100,4 @@ Usage of ./openai-api-route:
 
 ## 上游管理
 
-### 获取所有上游
-
-- URL: `/admin/upstreams`
-- 方法: GET
-- 权限要求: 需要进行身份验证
-- 返回数据类型: JSON
-- 请求示例:
-  ```bash
-  curl -X GET -H "Authorization: Bearer access_token" http://localhost:8080/admin/upstreams
-  ```
-- 返回示例:
-  ```json
-  [
-    {
-      "ID": 1,
-      "SK": "sk_value",
-      "Endpoint": "endpoint_value"
-    },
-    {
-      "ID": 2,
-      "SK": "sk_value",
-      "Endpoint": "endpoint_value"
-    }
-  ]
-  ```
-
-### 创建新的上游
-
-- URL: `/admin/upstreams`
-- 方法: POST
-- 权限要求: 需要进行身份验证
-- 请求数据类型: JSON
-- 请求示例:
-  ```bash
-  curl -X POST -H "Authorization: Bearer access_token" -H "Content-Type: application/json" -d '{"SK": "sk_value", "Endpoint": "endpoint_value"}' http://localhost:8080/admin/upstreams
-  ```
-- 返回数据类型: JSON
-- 返回示例:
-  ```json
-  {
-    "message": "success"
-  }
-  ```
-
-### 删除指定 ID 的上游
-
-- URL: `/admin/upstreams/:id`
-- 方法: DELETE
-- 权限要求: 需要进行身份验证
-- 返回数据类型: JSON
-- 请求示例:
-  ```bash
-  curl -X DELETE -H "Authorization: Bearer access_token" http://localhost:8080/admin/upstreams/1
-  ```
-- 返回示例:
-  ```json
-  {
-    "message": "success"
-  }
-  ```
-
-### 更新指定 ID 的上游
-
-- URL: `/admin/upstreams/:id`
-- 方法: PUT
-- 权限要求: 需要进行身份验证
-- 请求数据类型: JSON
-- 请求示例:
-  ```bash
-  curl -X PUT -H "Authorization: Bearer access_token" -H "Content-Type: application/json" -d '{"SK": "sk_value", "Endpoint": "endpoint_value"}' http://localhost:8080/admin/upstreams/1
-  ```
-- 返回数据类型: JSON
-- 返回示例:
-  ```json
-  {
-    "message": "success"
-  }
-  ```
+没什么好说的，直接操作数据库 `openai_upstreams` 表，改动立即生效
