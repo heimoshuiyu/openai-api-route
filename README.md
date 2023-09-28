@@ -1,4 +1,13 @@
-# API 文档
+# openai-api-route 文档
+
+这是一个 OpenAI API 负载均衡的简易工具，使用 golang 原生 reverse proxy 方法转发请求到 OpenAI 上游
+
+功能包括：
+
+- 更改 Authorization 验证头
+- 多种负载均衡策略
+- 记录完整的请求内容、IP 地址、响应时间以及 GPT 回复文本
+- 上游返回错误时发送 飞书 或 Matrix 消息通知
 
 本文档详细介绍了如何使用负载均衡和能力 API 的方法和端点。
 
