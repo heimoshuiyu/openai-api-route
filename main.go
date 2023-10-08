@@ -210,7 +210,8 @@ func main() {
 					record.Response = "failed to read response from upstream " + err.Error()
 					return errors.New(record.Response)
 				}
-				record.Response = fmt.Sprintf("upstream return '%s' with '%s'", r.Status, string(body))
+				record.Response = fmt.Sprintf("openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
+				record.Status = r.StatusCode
 				return fmt.Errorf(record.Response)
 			}
 			// count success
@@ -221,22 +222,23 @@ func main() {
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Println("Error", err, upstream.SK, upstream.Endpoint)
 
+			log.Println("debug", r)
+
 			// abort to error handle
 			c.AbortWithError(502, err)
 
-			// send notification
-			upstreams := []OPENAI_UPSTREAM{}
-			db.Find(&upstreams)
-			content := fmt.Sprintf("[%s] OpenAI 转发出错 ID: %d... 密钥: [%s] 上游: [%s] 错误: %s",
-				c.ClientIP(),
-				upstream.ID, upstream.SK, upstream.Endpoint, err.Error(),
-			)
-			if err.Error() != "context canceled" && r.Response.StatusCode != 400 {
-				go sendMatrixMessage(content)
-				go sendFeishuMessage(content)
+			log.Println("response is", r.Response)
+
+			if record.Status == 0 {
+				record.Status = 502
+			}
+			if record.Response == "" {
+				record.Response = err.Error()
+			}
+			if r.Response != nil {
+				record.Status = r.Response.StatusCode
 			}
 
-			log.Println("response is", r.Response)
 		}
 
 		func() {
@@ -294,7 +296,6 @@ func main() {
 				record.Response = fetchResp.Choices[0].Message.Content
 			} else {
 				log.Println("Unknown content type", contentType)
-				return
 			}
 		}
 
@@ -302,7 +303,7 @@ func main() {
 			record.Body = ""
 		}
 
-		log.Println("Record result:", record.Response)
+		log.Println("Record result:", record.Status, record.Response)
 		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
 		if db.Create(&record).Error != nil {
 			log.Println("Error to save record:", record)
