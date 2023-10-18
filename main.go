@@ -308,7 +308,7 @@ func main() {
 		if db.Create(&record).Error != nil {
 			log.Println("Error to save record:", record)
 		}
-		if record.Status != 200 {
+		if record.Status != 200 && record.Response != "context canceled" {
 			errMessage := fmt.Sprintf("IP: %s request %s error %d with %s", record.IP, upstream.Endpoint, record.Status, record.Response)
 			go sendFeishuMessage(errMessage)
 			go sendMatrixMessage(errMessage)
