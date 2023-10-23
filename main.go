@@ -80,7 +80,7 @@ func main() {
 
 	// metrics
 	m := ginmetrics.GetMonitor()
-	// m.SetMetricPath("/debug/metrics")
+	m.SetMetricPath("/v1/metrics")
 	m.Use(engine)
 
 	// error handle middleware
