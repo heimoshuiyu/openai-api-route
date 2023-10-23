@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,12 +11,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -69,9 +68,9 @@ func main() {
 	if *listMode {
 		result := make([]OPENAI_UPSTREAM, 0)
 		db.Find(&result)
-		fmt.Println("SK\tEndpoint\tSuccess\tFailed\tLast Success Time")
+		fmt.Println("SK\tEndpoint")
 		for _, upstream := range result {
-			fmt.Println(upstream.SK, upstream.Endpoint, upstream.SuccessCount, upstream.FailedCount, upstream.LastCallSuccessTime)
+			fmt.Println(upstream.SK, upstream.Endpoint)
 		}
 		return
 	}
@@ -97,13 +96,30 @@ func main() {
 	})
 
 	// CORS handler
-	engine.Use(handleCORS)
+	engine.OPTIONS("/v1/*any", func(ctx *gin.Context) {
+		header := ctx.Writer.Header()
+		header.Set("Access-Control-Allow-Origin", "*")
+		header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+		header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+		ctx.AbortWithStatus(200)
+	})
 
 	// get authorization config from db
 	db.Take(&authConfig, "key = ?", "authorization")
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
-		trackID := uuid.New()
+		record := Record{
+			IP:            c.ClientIP(),
+			CreatedAt:     time.Now(),
+			Authorization: c.Request.Header.Get("Authorization"),
+		}
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("Error:", err)
+				c.AbortWithError(500, fmt.Errorf("%s", err))
+			}
+		}()
+
 		// check authorization header
 		if !*noauth {
 			if handleAuth(c) != nil {
@@ -144,6 +160,8 @@ func main() {
 			return
 		}
 
+		record.UpstreamID = upstream.ID
+
 		// reverse proxy
 		remote, err := url.Parse(upstream.Endpoint)
 		if err != nil {
@@ -164,7 +182,7 @@ func main() {
 			}
 
 			// record chat message from user
-			go recordUserMessage(c, db, trackID, body)
+			record.Body = string(body)
 
 			out.Body = io.NopCloser(bytes.NewReader(body))
 
@@ -174,24 +192,35 @@ func main() {
 			out.URL.Path = in.URL.Path
 			out.Header = http.Header{}
 			out.Header.Set("Host", remote.Host)
-			out.Header.Set("Authorization", "Bearer "+upstream.SK)
+			if upstream.SK == "asis" {
+				out.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+			} else {
+				out.Header.Set("Authorization", "Bearer "+upstream.SK)
+			}
 			out.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
 		}
 		var buf bytes.Buffer
 		var contentType string
 		proxy.ModifyResponse = func(r *http.Response) error {
+			record.Status = r.StatusCode
+			r.Header.Del("Access-Control-Allow-Origin")
+			r.Header.Del("Access-Control-Allow-Methods")
+			r.Header.Del("Access-Control-Allow-Headers")
+			r.Header.Set("Access-Control-Allow-Origin", "*")
+			r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+			r.Header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+
 			if r.StatusCode != 200 {
 				body, err := io.ReadAll(r.Body)
 				if err != nil {
-					return errors.New("failed to read response from upstream " + err.Error())
+					record.Response = "failed to read response from upstream " + err.Error()
+					return errors.New(record.Response)
 				}
-				return fmt.Errorf("upstream return '%s' with '%s'", r.Status, string(body))
+				record.Response = fmt.Sprintf("openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
+				record.Status = r.StatusCode
+				return fmt.Errorf(record.Response)
 			}
 			// count success
-			go db.Model(&upstream).Updates(map[string]interface{}{
-				"success_count":          gorm.Expr("success_count + ?", 1),
-				"last_call_success_time": time.Now(),
-			})
 			r.Body = io.NopCloser(io.TeeReader(r.Body, &buf))
 			contentType = r.Header.Get("content-type")
 			return nil
@@ -199,142 +228,98 @@ func main() {
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Println("Error", err, upstream.SK, upstream.Endpoint)
 
+			log.Println("debug", r)
+
 			// abort to error handle
 			c.AbortWithError(502, err)
 
-			// send notification
-			upstreams := []OPENAI_UPSTREAM{}
-			db.Find(&upstreams)
-			upstreamDescriptions := make([]string, 0)
-			for _, upstream := range upstreams {
-				upstreamDescriptions = append(upstreamDescriptions, fmt.Sprintf("ID: %d, %s: %s 成功次数: %d, 失败次数: %d, 最后成功调用: %s",
-					upstream.ID, upstream.SK, upstream.Endpoint, upstream.SuccessCount, upstream.FailedCount, upstream.LastCallSuccessTime,
-				))
+			log.Println("response is", r.Response)
+
+			if record.Status == 0 {
+				record.Status = 502
 			}
-			content := fmt.Sprintf("[%s] OpenAI 转发出错 ID: %d... 密钥: [%s] 上游: [%s] 错误: %s\n---\n%s",
-				c.ClientIP(),
-				upstream.ID, upstream.SK[:10], upstream.Endpoint, err.Error(),
-				strings.Join(upstreamDescriptions, "\n"),
-			)
-			go sendMatrixMessage(content)
-			if err.Error() != "context canceled" && r.Response.StatusCode != 400 {
-				// count failed
-				go db.Model(&upstream).Update("failed_count", gorm.Expr("failed_count + ?", 1))
-				go sendFeishuMessage(content)
+			if record.Response == "" {
+				record.Response = err.Error()
+			}
+			if r.Response != nil {
+				record.Status = r.Response.StatusCode
 			}
 
-			log.Println("response is", r.Response)
 		}
-		proxy.ServeHTTP(c.Writer, c.Request)
+
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("Panic recover :", err)
+				}
+			}()
+			proxy.ServeHTTP(c.Writer, c.Request)
+		}()
+
 		resp, err := io.ReadAll(io.NopCloser(&buf))
 		if err != nil {
-			log.Println("Failed to read from response tee buffer", err)
+			record.Response = "failed to read response from upstream " + err.Error()
+			log.Println(record.Response)
+		} else {
+
+			// record response
+			// stream mode
+			if strings.HasPrefix(contentType, "text/event-stream") {
+				for _, line := range strings.Split(string(resp), "\n") {
+					chunk := StreamModeChunk{}
+					line = strings.TrimPrefix(line, "data:")
+					line = strings.TrimSpace(line)
+					if line == "" {
+						continue
+					}
+
+					err := json.Unmarshal([]byte(line), &chunk)
+					if err != nil {
+						log.Println(err)
+						continue
+					}
+
+					if len(chunk.Choices) == 0 {
+						continue
+					}
+					record.Response += chunk.Choices[0].Delta.Content
+				}
+			} else if strings.HasPrefix(contentType, "application/json") {
+				var fetchResp FetchModeResponse
+				err := json.Unmarshal(resp, &fetchResp)
+				if err != nil {
+					log.Println("Error parsing fetch response:", err)
+					return
+				}
+				if !strings.HasPrefix(fetchResp.Model, "gpt-") {
+					log.Println("Not GPT model, skip recording response:", fetchResp.Model)
+					return
+				}
+				if len(fetchResp.Choices) == 0 {
+					log.Println("Error: fetch response choice length is 0")
+					return
+				}
+				record.Response = fetchResp.Choices[0].Message.Content
+			} else {
+				log.Println("Unknown content type", contentType)
+			}
 		}
-		go recordAssistantResponse(contentType, db, trackID, resp)
+
+		if len(record.Body) > 1024*512 {
+			record.Body = ""
+		}
+
+		log.Println("Record result:", record.Status, record.Response)
+		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
+		if db.Create(&record).Error != nil {
+			log.Println("Error to save record:", record)
+		}
+		if record.Status != 200 && record.Response != "context canceled" {
+			errMessage := fmt.Sprintf("IP: %s request %s error %d with %s", record.IP, upstream.Endpoint, record.Status, record.Response)
+			go sendFeishuMessage(errMessage)
+			go sendMatrixMessage(errMessage)
+		}
 	})
 
-	// ---------------------------------
-	// admin APIs
-	engine.POST("/admin/login", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.GET("/admin/upstreams", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		upstreams := make([]OPENAI_UPSTREAM, 0)
-		db.Find(&upstreams)
-		c.JSON(200, upstreams)
-	})
-	engine.POST("/admin/upstreams", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		newUpstream := OPENAI_UPSTREAM{}
-		err := c.BindJSON(&newUpstream)
-		if err != nil {
-			c.AbortWithError(502, errors.New("can't parse OPENAI_UPSTREAM object"))
-			return
-		}
-		if newUpstream.SK == "" || newUpstream.Endpoint == "" {
-			c.AbortWithError(403, errors.New("can't create new OPENAI_UPSTREAM with empty sk or endpoint"))
-			return
-		}
-		log.Println("Saveing new OPENAI_UPSTREAM", newUpstream)
-		err = db.Create(&newUpstream).Error
-		if err != nil {
-			c.AbortWithError(403, err)
-			return
-		}
-	})
-	engine.DELETE("/admin/upstreams/:id", func(ctx *gin.Context) {
-		// check authorization headers
-		if handleAuth(ctx) != nil {
-			return
-		}
-		id, err := strconv.Atoi(ctx.Param("id"))
-		if err != nil {
-			ctx.AbortWithError(502, err)
-			return
-		}
-		upstream := OPENAI_UPSTREAM{}
-		upstream.ID = uint(id)
-		db.Delete(&upstream)
-		ctx.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.PUT("/admin/upstreams/:id", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		upstream := OPENAI_UPSTREAM{}
-		err := c.BindJSON(&upstream)
-		if err != nil {
-			c.AbortWithError(502, errors.New("can't parse OPENAI_UPSTREAM object"))
-			return
-		}
-		if upstream.SK == "" || upstream.Endpoint == "" {
-			c.AbortWithError(403, errors.New("can't create new OPENAI_UPSTREAM with empty sk or endpoint"))
-			return
-		}
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			c.AbortWithError(502, err)
-			return
-		}
-		upstream.ID = uint(id)
-		log.Println("Saveing new OPENAI_UPSTREAM", upstream)
-		err = db.Create(&upstream).Error
-		if err != nil {
-			c.AbortWithError(403, err)
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "success",
-		})
-	})
-	engine.GET("/admin/request_records", func(c *gin.Context) {
-		// check authorization headers
-		if handleAuth(c) != nil {
-			return
-		}
-		requestRecords := []Record{}
-		err := db.Order("id desc").Limit(100).Find(&requestRecords).Error
-		if err != nil {
-			c.AbortWithError(502, err)
-			return
-		}
-		c.JSON(200, requestRecords)
-	})
 	engine.Run(*listenAddr)
 }
