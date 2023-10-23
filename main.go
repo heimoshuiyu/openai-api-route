@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/penglongli/gin-metrics/ginmetrics"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -77,6 +78,11 @@ func main() {
 
 	// init gin
 	engine := gin.Default()
+
+	// metrics
+	m := ginmetrics.GetMonitor()
+	// m.SetMetricPath("/debug/metrics")
+	m.Use(engine)
 
 	// error handle middleware
 	engine.Use(func(c *gin.Context) {
