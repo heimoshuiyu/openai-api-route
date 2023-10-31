@@ -99,7 +99,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		errCtx = err
 
 		// abort to error handle
-		c.AbortWithError(502, err)
+		// c.AbortWithError(502, err)
 
 		log.Println("response is", r.Response)
 
