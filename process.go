@@ -15,9 +15,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record) error {
+func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, shouldResponse bool) error {
+	var errCtx error
 
 	record.UpstreamID = upstream.ID
+	record.Response = ""
+	record.Authorization = upstream.SK
+	// [TODO] record request body
 
 	// reverse proxy
 	remote, err := url.Parse(upstream.Endpoint)
@@ -27,21 +31,22 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record) e
 	}
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 	proxy.Director = nil
+	var inBody []byte
 	proxy.Rewrite = func(proxyRequest *httputil.ProxyRequest) {
 		in := proxyRequest.In
 		out := proxyRequest.Out
 
 		// read request body
-		body, err := io.ReadAll(in.Body)
+		inBody, err = io.ReadAll(in.Body)
 		if err != nil {
 			c.AbortWithError(502, errors.New("reverse proxy middleware failed to read request body "+err.Error()))
 			return
 		}
 
 		// record chat message from user
-		record.Body = string(body)
+		record.Body = string(inBody)
 
-		out.Body = io.NopCloser(bytes.NewReader(body))
+		out.Body = io.NopCloser(bytes.NewReader(inBody))
 
 		out.Host = remote.Host
 		out.URL.Scheme = remote.Scheme
@@ -60,6 +65,10 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record) e
 	var contentType string
 	proxy.ModifyResponse = func(r *http.Response) error {
 		record.Status = r.StatusCode
+		if !shouldResponse && r.StatusCode != 200 {
+			log.Println("upstream return not 200 and should not response", r.StatusCode)
+			return errors.New("upstream return not 200 and should not response")
+		}
 		r.Header.Del("Access-Control-Allow-Origin")
 		r.Header.Del("Access-Control-Allow-Methods")
 		r.Header.Del("Access-Control-Allow-Headers")
@@ -87,6 +96,8 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record) e
 
 		log.Println("debug", r)
 
+		errCtx = err
+
 		// abort to error handle
 		c.AbortWithError(502, err)
 
@@ -104,14 +115,14 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record) e
 
 	}
 
-	func() {
-		defer func() {
-			if err := recover(); err != nil {
-				log.Println("Panic recover :", err)
-			}
-		}()
-		proxy.ServeHTTP(c.Writer, c.Request)
-	}()
+	proxy.ServeHTTP(c.Writer, c.Request)
+
+	// return context error
+	if errCtx != nil {
+		// fix inrequest body
+		c.Request.Body = io.NopCloser(bytes.NewReader(inBody))
+		return errCtx
+	}
 
 	resp, err := io.ReadAll(io.NopCloser(&buf))
 	if err != nil {

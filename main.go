@@ -33,6 +33,11 @@ func main() {
 		log.Fatal("Failed to connect to database")
 	}
 
+	// load all upstreams
+	upstreams := make([]OPENAI_UPSTREAM, 0)
+	db.Find(&upstreams)
+	log.Println("Load upstreams number:", len(upstreams))
+
 	err = initconfig(db)
 	if err != nil {
 		log.Fatal(err)
@@ -114,40 +119,22 @@ func main() {
 			}
 		}
 
-		// get load balance policy
-		policy := ConfigKV{Value: "main"}
-		db.Take(&policy, "key = ?", "policy")
-		log.Println("policy is", policy.Value)
+		for index, upstream := range upstreams {
+			if upstream.Endpoint == "" || upstream.SK == "" {
+				c.AbortWithError(500, fmt.Errorf("invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
+				continue
+			}
 
-		upstream := OPENAI_UPSTREAM{}
+			shouldResponse := index == len(upstreams)-1
 
-		// choose openai upstream
-		switch policy.Value {
-		case "main":
-			db.Order("failed_count, success_count desc").First(&upstream)
-		case "random":
-			// randomly select one upstream
-			db.Order("random()").Take(&upstream)
-		case "random_available":
-			// randomly select one non-failed upstream
-			db.Where("failed_count = ?", 0).Order("random()").Take(&upstream)
-		case "round_robin":
-			// iterates each upstream
-			db.Order("last_call_success_time").First(&upstream)
-		case "round_robin_available":
-			db.Where("failed_count = ?", 0).Order("last_call_success_time").First(&upstream)
-		default:
-			c.AbortWithError(500, fmt.Errorf("unknown load balance policy '%s'", policy.Value))
+			err = processRequest(c, &upstream, &record, shouldResponse)
+			if err != nil {
+				log.Println("Error from upstream, should retry", upstream.SK, err)
+				continue
+			}
+
+			break
 		}
-
-		// do check
-		log.Println("upstream is", upstream.SK, upstream.Endpoint)
-		if upstream.Endpoint == "" || upstream.SK == "" {
-			c.AbortWithError(500, fmt.Errorf("invaild upstream from '%s' policy", policy.Value))
-			return
-		}
-
-		processRequest(c, &upstream, &record)
 
 		log.Println("Record result:", record.Status, record.Response)
 		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
@@ -155,7 +142,7 @@ func main() {
 			log.Println("Error to save record:", record)
 		}
 		if record.Status != 200 && record.Response != "context canceled" {
-			errMessage := fmt.Sprintf("IP: %s request %s error %d with %s", record.IP, upstream.Endpoint, record.Status, record.Response)
+			errMessage := fmt.Sprintf("IP: %s request all upstreams error %d with %s", record.IP, record.Status, record.Response)
 			go sendFeishuMessage(errMessage)
 			go sendMatrixMessage(errMessage)
 		}
