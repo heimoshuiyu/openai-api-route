@@ -129,7 +129,7 @@ func main() {
 
 			err = processRequest(c, &upstream, &record, shouldResponse)
 			if err != nil {
-				log.Println("Error from upstream, should retry", upstream.SK, err)
+				log.Println("Error from upstream", upstream.Endpoint, "should retry", err)
 				continue
 			}
 
