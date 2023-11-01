@@ -15,6 +15,7 @@ type Record struct {
 	CreatedAt     time.Time
 	IP            string
 	Body          string `gorm:"serializer:json"`
+	Model         string
 	Response      string
 	ElapsedTime   time.Duration
 	Status        int

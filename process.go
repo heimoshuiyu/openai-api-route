@@ -55,6 +55,10 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// record chat message from user
 		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
+		// record if parse success
+		if requestBodyOK == nil {
+			record.Model = requestBody.Model
+		}
 
 		// set timeout, default is 5 second
 		timeout := 5 * time.Second
@@ -95,7 +99,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	var contentType string
 	proxy.ModifyResponse = func(r *http.Response) error {
 		haveResponse = true
-		log.Println("haveResponse set to true")
 		record.Status = r.StatusCode
 		if !shouldResponse && r.StatusCode != 200 {
 			log.Println("upstream return not 200 and should not response", r.StatusCode)
