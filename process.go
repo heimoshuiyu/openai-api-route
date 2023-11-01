@@ -11,8 +11,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/net/context"
 )
 
 func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, shouldResponse bool) error {
@@ -29,11 +31,24 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		c.AbortWithError(500, errors.New("can't parse reverse proxy remote URL"))
 		return err
 	}
+
+	// set timeout, default is 5 second
+	timeout := 5 * time.Second
+	haveResponse := false
+	if upstream.Timeout > 0 {
+		// convert upstream.Timeout(second) to nanosecond
+		timeout = time.Duration(upstream.Timeout) * time.Second
+	}
+
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 	proxy.Director = nil
 	var inBody []byte
 	proxy.Rewrite = func(proxyRequest *httputil.ProxyRequest) {
 		in := proxyRequest.In
+
+		ctx, cancel := context.WithCancel(context.Background())
+		proxyRequest.Out = proxyRequest.Out.WithContext(ctx)
+
 		out := proxyRequest.Out
 
 		// read request body
@@ -45,6 +60,16 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 		// record chat message from user
 		record.Body = string(inBody)
+
+		// timeout out request
+		go func() {
+			time.Sleep(timeout)
+			if !haveResponse {
+				log.Println("Timeout", upstream.Endpoint)
+				errCtx = errors.New("timeout")
+				cancel()
+			}
+		}()
 
 		out.Body = io.NopCloser(bytes.NewReader(inBody))
 
@@ -64,6 +89,8 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	var buf bytes.Buffer
 	var contentType string
 	proxy.ModifyResponse = func(r *http.Response) error {
+		haveResponse = true
+		log.Println("haveResponse set to true")
 		record.Status = r.StatusCode
 		if !shouldResponse && r.StatusCode != 200 {
 			log.Println("upstream return not 200 and should not response", r.StatusCode)

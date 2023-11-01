@@ -9,4 +9,5 @@ type OPENAI_UPSTREAM struct {
 	gorm.Model
 	SK       string `gorm:"index:idx_sk_endpoint,unique"` // key
 	Endpoint string `gorm:"index:idx_sk_endpoint,unique"` // endpoint
+	Timeout  int64  // timeout in seconds
 }
