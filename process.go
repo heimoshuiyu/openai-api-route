@@ -127,6 +127,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		return nil
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		haveResponse = true
 		log.Println("Error", err, upstream.SK, upstream.Endpoint)
 
 		log.Println("debug", r)
