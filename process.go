@@ -32,13 +32,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		return err
 	}
 
-	// set timeout, default is 5 second
-	timeout := 5 * time.Second
 	haveResponse := false
-	if upstream.Timeout > 0 {
-		// convert upstream.Timeout(second) to nanosecond
-		timeout = time.Duration(upstream.Timeout) * time.Second
-	}
 
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 	proxy.Director = nil
@@ -60,12 +54,23 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 		// record chat message from user
 		record.Body = string(inBody)
+		requestBody, requestBodyOK := ParseRequestBody(inBody)
+
+		// set timeout, default is 5 second
+		timeout := 5 * time.Second
+		if upstream.Timeout > 0 {
+			// convert upstream.Timeout(second) to nanosecond
+			timeout = time.Duration(upstream.Timeout) * time.Second
+		}
+		if requestBodyOK == nil && !requestBody.Stream {
+			timeout = 60 * time.Second
+		}
 
 		// timeout out request
 		go func() {
 			time.Sleep(timeout)
 			if !haveResponse {
-				log.Println("Timeout", upstream.Endpoint)
+				log.Println("Timeout upstream", upstream.Endpoint)
 				errCtx = errors.New("timeout")
 				cancel()
 			}
