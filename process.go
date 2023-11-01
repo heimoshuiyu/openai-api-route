@@ -76,6 +76,9 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			if !haveResponse {
 				log.Println("Timeout upstream", upstream.Endpoint)
 				errCtx = errors.New("timeout")
+				if shouldResponse {
+					c.AbortWithError(502, errCtx)
+				}
 				cancel()
 			}
 		}()
@@ -129,8 +132,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		haveResponse = true
 		log.Println("Error", err, upstream.SK, upstream.Endpoint)
-
-		log.Println("debug", r)
 
 		errCtx = err
 
