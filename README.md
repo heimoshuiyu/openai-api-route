@@ -1,13 +1,16 @@
 # openai-api-route 文档
 
-这是一个 OpenAI API 负载均衡的简易工具，使用 golang 原生 reverse proxy 方法转发请求到 OpenAI 上游
+这是一个 OpenAI API 负载均衡的简易工具，使用 golang 原生 reverse proxy 方法转发请求到 OpenAI 上游。遇到上游返回报错或请求超时会自动按顺序选择下一个上游进行重试，直到所有上游都请求失败。
 
 功能包括：
 
-- 更改 Authorization 验证头
-- 多种负载均衡策略
-- 记录完整的请求内容、IP 地址、响应时间以及 GPT 回复文本
-- 上游返回错误时发送 飞书 或 Matrix 消息通知
+- 自定义 Authorization 验证头
+- 支持所有类型的接口 (`/v1/*`)
+- 提供 Prometheus Metrics 统计接口 (`/v1/metrics`)
+- 按照定义顺序请求 OpenAI 上游
+- 识别 ChatCompletions Stream 请求，针对 Stream 请求使用 5 秒超时。对于其他请求使用60秒超时。
+- 记录完整的请求内容、使用的上游、IP 地址、响应时间以及 GPT 回复文本
+- 请求出错时发送 飞书 或 Matrix 消息通知
 
 本文档详细介绍了如何使用负载均衡和能力 API 的方法和端点。
 
@@ -24,37 +27,37 @@
 3. 打开终端，并进入到仓库目录中。
 
 4. 在终端中执行以下命令来编译代码：
-
+   
    ```
    make
    ```
-
+   
    这将会编译代码并生成可执行文件。
 
 5. 编译成功后，您可以直接运行以下命令来启动负载均衡 API：
-
+   
    ```
    ./openai-api-route
    ```
-
+   
    默认情况下，API 将会在本地的 8888 端口进行监听。
-
+   
    如果您希望使用不同的监听地址，可以使用 `-addr` 参数来指定，例如：
-
+   
    ```
    ./openai-api-route -addr 0.0.0.0:8080
    ```
-
+   
    这将会将监听地址设置为 0.0.0.0:8080。
 
 6. 如果数据库不存在，系统会自动创建一个名为 `db.sqlite` 的数据库文件。
-
+   
    如果您希望使用不同的数据库地址，可以使用 `-database` 参数来指定，例如：
-
+   
    ```
    ./openai-api-route -database /path/to/database.db
    ```
-
+   
    这将会将数据库地址设置为 `/path/to/database.db`。
 
 7. 现在，您已经成功编译并运行了负载均衡和能力 API。您可以根据需要添加上游、管理上游，并使用 API 进行相关操作。
@@ -91,22 +94,4 @@ Usage of ./openai-api-route:
 ./openai-api-route -add -sk sk-xxxxx -endpoint https://api.openai.com/v1
 ```
 
-您也可以使用 `/admin/upstreams` 的 HTTP 接口进行控制。
-
-另外，您还可以直接编辑数据库中的 `openai_upstreams` 表。
-
-## 身份验证
-
-### 身份验证中间件流程
-
-1. 从请求头中获取`Authorization`字段的值。
-2. 检查`Authorization`字段的值是否以`"Bearer"`开头。
-   - 如果不是，则返回错误信息："authorization header should start with 'Bearer'"（HTTP 状态码 403）。
-3. 去除`Authorization`字段值开头的`"Bearer"`和前后的空格。
-4. 将剩余的值与预先设置的身份验证配置进行比较。
-   - 如果不匹配，则返回错误信息："wrong authorization header"（HTTP 状态码 403）。
-5. 如果身份验证通过，则返回`nil`。
-
-## 上游管理
-
-没什么好说的，直接操作数据库 `openai_upstreams` 表，改动立即生效
+另外，您还可以直接编辑数据库中的 `openai_upstreams` 表进行 OpenAI 上游的增删改查管理。改动的上游需要重启负载均衡服务后才能生效。
