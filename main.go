@@ -133,6 +133,10 @@ func main() {
 
 			shouldResponse := index == len(upstreams)-1
 
+			if len(upstreams) == 1 {
+				upstream.Timeout = 120
+			}
+
 			err = processRequest(c, &upstream, &record, shouldResponse)
 			if err != nil {
 				log.Println("Error from upstream", upstream.Endpoint, "should retry", err)

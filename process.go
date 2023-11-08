@@ -62,15 +62,15 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 		// set timeout, default is 60 second
 		timeout := 60 * time.Second
-		if upstream.Timeout > 0 {
-			// convert upstream.Timeout(second) to nanosecond
-			timeout = time.Duration(upstream.Timeout) * time.Second
-		}
 		if requestBodyOK == nil && requestBody.Stream {
 			timeout = 5 * time.Second
 		}
 		if len(inBody) > 1024*128 {
 			timeout = 20 * time.Second
+		}
+		if upstream.Timeout > 0 {
+			// convert upstream.Timeout(second) to nanosecond
+			timeout = time.Duration(upstream.Timeout) * time.Second
 		}
 
 		// timeout out request
