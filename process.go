@@ -69,6 +69,9 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		if requestBodyOK == nil && requestBody.Stream {
 			timeout = 5 * time.Second
 		}
+		if len(inBody) > 1024*128 {
+			timeout = 20 * time.Second
+		}
 
 		// timeout out request
 		go func() {
