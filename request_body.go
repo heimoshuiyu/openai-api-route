@@ -4,23 +4,15 @@ import (
 	"encoding/json"
 )
 
-type Message struct {
-	Content string `json:"content"`
-	Role    string `json:"role"`
-}
-
 type RequestBody struct {
-	Model            string    `json:"model"`
-	Messages         []Message `json:"messages"`
-	Stream           bool      `json:"stream"`
-	Temperature      float64   `json:"temperature"`
-	TopP             int64     `json:"top_p"`
-	PresencePenalty  float64   `json:"presence_penalty"`
-	FrequencyPenalty float64   `json:"frequency_penalty"`
+	Model  string `json:"model"`
+	Stream bool   `json:"stream"`
 }
 
 func ParseRequestBody(data []byte) (RequestBody, error) {
-	ret := RequestBody{}
+	ret := RequestBody{
+		Stream: false,
+	}
 
 	var requestBody RequestBody
 	err := json.Unmarshal(data, &requestBody)
