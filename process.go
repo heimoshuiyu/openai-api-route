@@ -22,7 +22,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 	record.UpstreamID = upstream.ID
 	record.Response = ""
-	record.Authorization = upstream.SK
 	// [TODO] record request body
 
 	// reverse proxy
