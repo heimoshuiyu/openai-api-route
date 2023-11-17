@@ -133,6 +133,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		haveResponse = true
+		record.ResponseTime = time.Now().Sub(record.CreatedAt)
 		log.Println("Error", err, upstream.SK, upstream.Endpoint)
 
 		errCtx = err

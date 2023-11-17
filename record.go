@@ -17,6 +17,7 @@ type Record struct {
 	Body          string `gorm:"serializer:json"`
 	Model         string
 	Response      string
+	ResponseTime  time.Duration
 	ElapsedTime   time.Duration
 	Status        int
 	UpstreamID    uint
