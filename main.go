@@ -15,6 +15,7 @@ import (
 
 func main() {
 	dbAddr := flag.String("database", "./db.sqlite", "Database address")
+	upstreamsFile := flag.String("upstreams", "./upstreams.yaml", "Upstreams file")
 	listenAddr := flag.String("addr", ":8888", "Listening address")
 	addMode := flag.Bool("add", false, "Add an OpenAI upstream")
 	listMode := flag.Bool("list", false, "List all upstream")
@@ -35,8 +36,7 @@ func main() {
 	}
 
 	// load all upstreams
-	upstreams := make([]OPENAI_UPSTREAM, 0)
-	db.Find(&upstreams)
+	upstreams := readUpstreams(*upstreamsFile)
 	log.Println("Load upstreams number:", len(upstreams))
 
 	err = initconfig(db)

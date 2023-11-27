@@ -20,7 +20,7 @@ import (
 func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, shouldResponse bool) error {
 	var errCtx error
 
-	record.UpstreamID = upstream.ID
+	record.UpstreamEndpoint = upstream.Endpoint
 	record.Response = ""
 	// [TODO] record request body
 

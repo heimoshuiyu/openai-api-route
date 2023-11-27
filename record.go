@@ -11,17 +11,18 @@ import (
 )
 
 type Record struct {
-	ID            int64 `gorm:"primaryKey,autoIncrement"`
-	CreatedAt     time.Time
-	IP            string
-	Body          string `gorm:"serializer:json"`
-	Model         string
-	Response      string
-	ResponseTime  time.Duration
-	ElapsedTime   time.Duration
-	Status        int
-	UpstreamID    uint
-	Authorization string
+	ID               int64 `gorm:"primaryKey,autoIncrement"`
+	UpstreamEndpoint string
+	CreatedAt        time.Time
+	IP               string
+	Body             string `gorm:"serializer:json"`
+	Model            string
+	Response         string
+	ResponseTime     time.Duration
+	ElapsedTime      time.Duration
+	Status           int
+	UpstreamID       uint
+	Authorization    string
 }
 
 type StreamModeChunk struct {
