@@ -17,11 +17,8 @@ func main() {
 	dbAddr := flag.String("database", "./db.sqlite", "Database address")
 	upstreamsFile := flag.String("upstreams", "./upstreams.yaml", "Upstreams file")
 	listenAddr := flag.String("addr", ":8888", "Listening address")
-	addMode := flag.Bool("add", false, "Add an OpenAI upstream")
 	listMode := flag.Bool("list", false, "List all upstream")
-	sk := flag.String("sk", "", "OpenAI API key (sk-xxxxx)")
 	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
-	endpoint := flag.String("endpoint", "https://api.openai.com/v1", "OpenAI API base")
 	flag.Parse()
 
 	log.Println("Service starting")
@@ -48,26 +45,9 @@ func main() {
 	db.AutoMigrate(&Record{})
 	log.Println("Auto migrate database done")
 
-	if *addMode {
-		if *sk == "" {
-			log.Fatal("Missing --sk flag")
-		}
-		newUpstream := OPENAI_UPSTREAM{}
-		newUpstream.SK = *sk
-		newUpstream.Endpoint = *endpoint
-		err = db.Create(&newUpstream).Error
-		if err != nil {
-			log.Fatal("Can not add upstream", err)
-		}
-		log.Println("Successuflly add upstream", *sk, *endpoint)
-		return
-	}
-
 	if *listMode {
-		result := make([]OPENAI_UPSTREAM, 0)
-		db.Find(&result)
 		fmt.Println("SK\tEndpoint")
-		for _, upstream := range result {
+		for _, upstream := range upstreams {
 			fmt.Println(upstream.SK, upstream.Endpoint)
 		}
 		return
