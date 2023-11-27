@@ -21,7 +21,7 @@ func handleAuth(c *gin.Context) error {
 	authorization = strings.Trim(authorization[len("Bearer"):], " ")
 	log.Println("Received authorization", authorization)
 
-	for _, auth := range strings.Split(authConfig.Value, ",") {
+	for _, auth := range strings.Split(config.Authorization, ",") {
 		if authorization != strings.Trim(auth, " ") {
 			err = errors.New("wrong authorization header")
 			c.AbortWithError(403, err)

@@ -13,9 +13,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// global config
+var config Config
+
 func main() {
 	dbAddr := flag.String("database", "./db.sqlite", "Database address")
-	upstreamsFile := flag.String("upstreams", "./upstreams.yaml", "Upstreams file")
+	configFile := flag.String("config", "./config.yaml", "Config file")
 	listenAddr := flag.String("addr", ":8888", "Listening address")
 	listMode := flag.Bool("list", false, "List all upstream")
 	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
@@ -33,21 +36,15 @@ func main() {
 	}
 
 	// load all upstreams
-	upstreams := readUpstreams(*upstreamsFile)
-	log.Println("Load upstreams number:", len(upstreams))
+	config = readConfig(*configFile)
+	log.Println("Load upstreams number:", len(config.Upstreams))
 
-	err = initconfig(db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	db.AutoMigrate(&OPENAI_UPSTREAM{})
 	db.AutoMigrate(&Record{})
 	log.Println("Auto migrate database done")
 
 	if *listMode {
 		fmt.Println("SK\tEndpoint")
-		for _, upstream := range upstreams {
+		for _, upstream := range config.Upstreams {
 			fmt.Println(upstream.SK, upstream.Endpoint)
 		}
 		return
@@ -82,9 +79,6 @@ func main() {
 		ctx.AbortWithStatus(200)
 	})
 
-	// get authorization config from db
-	db.Take(&authConfig, "key = ?", "authorization")
-
 	engine.POST("/v1/*any", func(c *gin.Context) {
 		record := Record{
 			IP:            c.ClientIP(),
@@ -105,15 +99,15 @@ func main() {
 			}
 		}
 
-		for index, upstream := range upstreams {
+		for index, upstream := range config.Upstreams {
 			if upstream.Endpoint == "" || upstream.SK == "" {
 				c.AbortWithError(500, fmt.Errorf("invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
 				continue
 			}
 
-			shouldResponse := index == len(upstreams)-1
+			shouldResponse := index == len(config.Upstreams)-1
 
-			if len(upstreams) == 1 {
+			if len(config.Upstreams) == 1 {
 				upstream.Timeout = 120
 			}
 

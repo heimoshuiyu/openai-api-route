@@ -83,11 +83,13 @@ Usage of ./openai-api-route:
 以下是一个 `./upstreams.yaml` 文件配置示例
 
 ```yaml
-- sk: "secret_key_1"
-  endpoint: "https://api.openai.com/v2"
-- sk: "secret_key_2"
-  endpoint: "https://api.openai.com/v1"
-  timeout: 30
+authorization: woshimima
+upstreams:
+  - sk: "secret_key_1"
+    endpoint: "https://api.openai.com/v2"
+  - sk: "secret_key_2"
+    endpoint: "https://api.openai.com/v1"
+    timeout: 30
 ```
 
 请注意，程序会根据情况修改 timeout 的值

@@ -7,15 +7,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// one openai upstream contain a pair of key and endpoint
+type Config struct {
+	Authorization string            `yaml:"authorization"`
+	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
+}
 type OPENAI_UPSTREAM struct {
 	SK       string `yaml:"sk"`
 	Endpoint string `yaml:"endpoint"`
 	Timeout  int64  `yaml:"timeout"`
 }
 
-func readUpstreams(filepath string) []OPENAI_UPSTREAM {
-	var upstreams []OPENAI_UPSTREAM
+func readConfig(filepath string) Config {
+	var config Config
 
 	// read yaml file
 	data, err := os.ReadFile(filepath)
@@ -24,10 +27,10 @@ func readUpstreams(filepath string) []OPENAI_UPSTREAM {
 	}
 
 	// Unmarshal the YAML into the upstreams slice
-	err = yaml.Unmarshal(data, &upstreams)
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		log.Fatalf("Error unmarshaling YAML: %s", err)
 	}
 
-	return upstreams
+	return config
 }
