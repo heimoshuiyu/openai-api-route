@@ -21,6 +21,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	var errCtx error
 
 	record.UpstreamEndpoint = upstream.Endpoint
+	record.UpstreamSK = upstream.SK
 	record.Response = ""
 	// [TODO] record request body
 

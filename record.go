@@ -13,6 +13,7 @@ import (
 type Record struct {
 	ID               int64 `gorm:"primaryKey,autoIncrement"`
 	UpstreamEndpoint string
+	UpstreamSK       string
 	CreatedAt        time.Time
 	IP               string
 	Body             string `gorm:"serializer:json"`
@@ -21,8 +22,8 @@ type Record struct {
 	ResponseTime     time.Duration
 	ElapsedTime      time.Duration
 	Status           int
-	UpstreamID       uint
-	Authorization    string
+	Authorization    string // the autorization header send by client
+	UserAgent        string
 }
 
 type StreamModeChunk struct {

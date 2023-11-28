@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -17,6 +18,7 @@ import (
 var config Config
 
 func main() {
+	dbType := flag.String("dbtype", "sqlite", "Database type (sqlite or postgres)")
 	dbAddr := flag.String("database", "./db.sqlite", "Database address")
 	configFile := flag.String("config", "./config.yaml", "Config file")
 	listenAddr := flag.String("addr", ":8888", "Listening address")
@@ -27,12 +29,21 @@ func main() {
 	log.Println("Service starting")
 
 	// connect to database
-	db, err := gorm.Open(sqlite.Open(*dbAddr), &gorm.Config{
-		PrepareStmt:            true,
-		SkipDefaultTransaction: true,
-	})
-	if err != nil {
-		log.Fatal("Failed to connect to database")
+	var db *gorm.DB
+	var err error
+	switch *dbType {
+	case "sqlite":
+		db, err = gorm.Open(sqlite.Open(*dbAddr), &gorm.Config{
+			PrepareStmt:            true,
+			SkipDefaultTransaction: true,
+		})
+	case "postgres":
+		db, err = gorm.Open(postgres.Open(*dbAddr), &gorm.Config{
+			PrepareStmt:            true,
+			SkipDefaultTransaction: true,
+		})
+	default:
+		log.Fatalf("Unsupported database type: %s", *dbType)
 	}
 
 	// load all upstreams
@@ -84,6 +95,7 @@ func main() {
 			IP:            c.ClientIP(),
 			CreatedAt:     time.Now(),
 			Authorization: c.Request.Header.Get("Authorization"),
+			UserAgent:     c.Request.Header.Get("User-Agent"),
 		}
 		defer func() {
 			if err := recover(); err != nil {
