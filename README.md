@@ -72,8 +72,12 @@ Usage of ./openai-api-route:
         监听地址（默认为 ":8888"）
   -upstreams string
         上游配置文件（默认为 "./upstreams.yaml"）
+  -dbtype
+        数据库类型 (sqlite 或 postgres，默认为 sqlite)
   -database string
         数据库地址（默认为 "./db.sqlite"）
+        如果数据库为 postgres ，则此值应 PostgreSQL DSN 格式
+        例如 "host=127.0.0.1 port=5432 user=postgres dbname=openai_api_route sslmode=disable password=woshimima"
   -list
         列出所有上游
   -noauth

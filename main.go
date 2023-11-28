@@ -19,7 +19,7 @@ var config Config
 
 func main() {
 	dbType := flag.String("dbtype", "sqlite", "Database type (sqlite or postgres)")
-	dbAddr := flag.String("database", "./db.sqlite", "Database address")
+	dbAddr := flag.String("database", "./db.sqlite", "Database address, if dbType is postgres, this is the DSN connection string")
 	configFile := flag.String("config", "./config.yaml", "Config file")
 	listenAddr := flag.String("addr", ":8888", "Listening address")
 	listMode := flag.Bool("list", false, "List all upstream")
