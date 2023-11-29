@@ -37,12 +37,15 @@ func readConfig(filepath string) Config {
 
 	// set default value
 	if config.Address == "" {
+		log.Println("Address not set, use default value: :8888")
 		config.Address = ":8888"
 	}
 	if config.DBType == "" {
+		log.Println("DBType not set, use default value: sqlite")
 		config.DBType = "sqlite"
 	}
 	if config.DBAddr == "" {
+		log.Println("DBAddr not set, use default value: ./db.sqlite")
 		config.DBAddr = "./db.sqlite"
 	}
 

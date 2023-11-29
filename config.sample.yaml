@@ -1,0 +1,16 @@
+authorization: woshimima
+
+# 使用 sqlite 作为数据库储存请求记录
+dbtype: sqlite
+dbaddr: ./db.sqlite
+
+# 使用 postgres 作为数据库储存请求记录
+# dbtype: postgres
+# dbaddr: "host=127.0.0.1 port=5432 user=postgres dbname=openai_api_route sslmode=disable password=woshimima"
+
+upstreams:
+  - sk: "secret_key_1"
+    endpoint: "https://api.openai.com/v2"
+  - sk: "secret_key_2"
+    endpoint: "https://api.openai.com/v1"
+    timeout: 30

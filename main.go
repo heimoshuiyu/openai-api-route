@@ -25,6 +25,10 @@ func main() {
 
 	log.Println("Service starting")
 
+	// load all upstreams
+	config = readConfig(*configFile)
+	log.Println("Load upstreams number:", len(config.Upstreams))
+
 	// connect to database
 	var db *gorm.DB
 	var err error
@@ -40,12 +44,8 @@ func main() {
 			SkipDefaultTransaction: true,
 		})
 	default:
-		log.Fatalf("Unsupported database type: %s", config.DBType)
+		log.Fatalf("Unsupported database type: '%s'", config.DBType)
 	}
-
-	// load all upstreams
-	config = readConfig(*configFile)
-	log.Println("Load upstreams number:", len(config.Upstreams))
 
 	db.AutoMigrate(&Record{})
 	log.Println("Auto migrate database done")
