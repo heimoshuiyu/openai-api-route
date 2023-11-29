@@ -8,6 +8,9 @@ import (
 )
 
 type Config struct {
+	Address       string            `yaml:"address"`
+	DBType        string            `yaml:"dbtype"`
+	DBAddr        string            `yaml:"dbaddr"`
 	Authorization string            `yaml:"authorization"`
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
 }
@@ -30,6 +33,17 @@ func readConfig(filepath string) Config {
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		log.Fatalf("Error unmarshaling YAML: %s", err)
+	}
+
+	// set default value
+	if config.Address == "" {
+		config.Address = ":8888"
+	}
+	if config.DBType == "" {
+		config.DBType = "sqlite"
+	}
+	if config.DBAddr == "" {
+		config.DBAddr = "./db.sqlite"
 	}
 
 	return config

@@ -18,10 +18,7 @@ import (
 var config Config
 
 func main() {
-	dbType := flag.String("dbtype", "sqlite", "Database type (sqlite or postgres)")
-	dbAddr := flag.String("database", "./db.sqlite", "Database address, if dbType is postgres, this is the DSN connection string")
 	configFile := flag.String("config", "./config.yaml", "Config file")
-	listenAddr := flag.String("addr", ":8888", "Listening address")
 	listMode := flag.Bool("list", false, "List all upstream")
 	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
 	flag.Parse()
@@ -31,19 +28,19 @@ func main() {
 	// connect to database
 	var db *gorm.DB
 	var err error
-	switch *dbType {
+	switch config.DBType {
 	case "sqlite":
-		db, err = gorm.Open(sqlite.Open(*dbAddr), &gorm.Config{
+		db, err = gorm.Open(sqlite.Open(config.DBAddr), &gorm.Config{
 			PrepareStmt:            true,
 			SkipDefaultTransaction: true,
 		})
 	case "postgres":
-		db, err = gorm.Open(postgres.Open(*dbAddr), &gorm.Config{
+		db, err = gorm.Open(postgres.Open(config.DBAddr), &gorm.Config{
 			PrepareStmt:            true,
 			SkipDefaultTransaction: true,
 		})
 	default:
-		log.Fatalf("Unsupported database type: %s", *dbType)
+		log.Fatalf("Unsupported database type: %s", config.DBType)
 	}
 
 	// load all upstreams
@@ -144,5 +141,5 @@ func main() {
 		}
 	})
 
-	engine.Run(*listenAddr)
+	engine.Run(config.Address)
 }

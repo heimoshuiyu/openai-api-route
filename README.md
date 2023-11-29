@@ -88,6 +88,15 @@ Usage of ./openai-api-route:
 
 ```yaml
 authorization: woshimima
+
+# 使用 sqlite 作为数据库储存请求记录
+dbtype: sqlite
+dbaddr: ./db.sqlite
+
+# 使用 postgres 作为数据库储存请求记录
+# dbtype: postgres
+# dbaddr: "host=127.0.0.1 port=5432 user=postgres dbname=openai_api_route sslmode=disable password=woshimima"
+
 upstreams:
   - sk: "secret_key_1"
     endpoint: "https://api.openai.com/v2"
@@ -116,10 +125,10 @@ upstreams:
 
 服务在处理请求时会根据不同的条件设置不同的超时时间。超时时间是指服务等待上游服务器响应的最大时间。以下是超时时间的设置规则：
 
-1. **默认超时时间**：如果没有特殊条件，服务将使用默认的超时时间，即60秒。
+1. **默认超时时间**：如果没有特殊条件，服务将使用默认的超时时间，即 60 秒。
 
-2. **流式请求**：如果请求体被识别为流式（`requestBody.Stream` 为 `true`），并且请求体检查（`requestBodyOK`）没有发现问题，超时时间将被设置为5秒。这适用于那些预期会快速响应的流式请求。
+2. **流式请求**：如果请求体被识别为流式（`requestBody.Stream` 为 `true`），并且请求体检查（`requestBodyOK`）没有发现问题，超时时间将被设置为 5 秒。这适用于那些预期会快速响应的流式请求。
 
-3. **大请求体**：如果请求体的大小超过128KB（即 `len(inBody) > 1024*128`），超时时间将被设置为20秒。这考虑到了处理大型数据可能需要更长的时间。
+3. **大请求体**：如果请求体的大小超过 128KB（即 `len(inBody) > 1024*128`），超时时间将被设置为 20 秒。这考虑到了处理大型数据可能需要更长的时间。
 
-4. **上游超时配置**：如果上游服务器在配置中指定了超时时间（`upstream.Timeout` 大于0），服务将使用该值作为超时时间。这个值是以秒为单位的。
+4. **上游超时配置**：如果上游服务器在配置中指定了超时时间（`upstream.Timeout` 大于 0），服务将使用该值作为超时时间。这个值是以秒为单位的。
