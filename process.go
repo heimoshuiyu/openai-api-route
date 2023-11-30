@@ -105,6 +105,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	var contentType string
 	proxy.ModifyResponse = func(r *http.Response) error {
 		haveResponse = true
+		record.ResponseTime = time.Now().Sub(record.CreatedAt)
 		record.Status = r.StatusCode
 		if !shouldResponse && r.StatusCode != 200 {
 			log.Println("upstream return not 200 and should not response", r.StatusCode)
