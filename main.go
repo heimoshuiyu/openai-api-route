@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -38,11 +39,17 @@ func main() {
 			PrepareStmt:            true,
 			SkipDefaultTransaction: true,
 		})
+		if err != nil {
+			log.Fatalf("Error to connect sqlite database: %s", err)
+		}
 	case "postgres":
 		db, err = gorm.Open(postgres.Open(config.DBAddr), &gorm.Config{
 			PrepareStmt:            true,
 			SkipDefaultTransaction: true,
 		})
+		if err != nil {
+			log.Fatalf("Error to connect postgres database: %s", err)
+		}
 	default:
 		log.Fatalf("Unsupported database type: '%s'", config.DBType)
 	}
@@ -88,8 +95,13 @@ func main() {
 	})
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
+		hostname, err := os.Hostname()
+		if config.Hostname != "" {
+			hostname = config.Hostname
+		}
 		record := Record{
 			IP:            c.ClientIP(),
+			Hostname:      hostname,
 			CreatedAt:     time.Now(),
 			Authorization: c.Request.Header.Get("Authorization"),
 			UserAgent:     c.Request.Header.Get("User-Agent"),

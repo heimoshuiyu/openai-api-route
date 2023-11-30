@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	Address       string            `yaml:"address"`
+	Hostname      string            `yaml:"hostname"`
 	DBType        string            `yaml:"dbtype"`
 	DBAddr        string            `yaml:"dbaddr"`
 	Authorization string            `yaml:"authorization"`

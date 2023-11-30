@@ -6,6 +6,7 @@ import (
 
 type Record struct {
 	ID               int64 `gorm:"primaryKey,autoIncrement"`
+	Hostname         string
 	UpstreamEndpoint string
 	UpstreamSK       string
 	CreatedAt        time.Time
