@@ -10,7 +10,7 @@ type Record struct {
 	UpstreamSK       string
 	CreatedAt        time.Time
 	IP               string
-	Body             string `gorm:"serializer:json"`
+	Body             string
 	Model            string
 	Response         string
 	ResponseTime     time.Duration
