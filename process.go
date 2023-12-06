@@ -91,7 +91,9 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		out.Host = remote.Host
 		out.URL.Scheme = remote.Scheme
 		out.URL.Host = remote.Host
-		out.URL.Path = in.URL.Path
+
+		out.URL.Path = upstream.URL.Path + strings.TrimPrefix(in.URL.Path, "/v1")
+
 		out.Header = http.Header{}
 		out.Header.Set("Host", remote.Host)
 		if upstream.SK == "asis" {

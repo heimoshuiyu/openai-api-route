@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -19,6 +20,7 @@ type OPENAI_UPSTREAM struct {
 	SK       string `yaml:"sk"`
 	Endpoint string `yaml:"endpoint"`
 	Timeout  int64  `yaml:"timeout"`
+	URL      *url.URL
 }
 
 func readConfig(filepath string) Config {
@@ -48,6 +50,15 @@ func readConfig(filepath string) Config {
 	if config.DBAddr == "" {
 		log.Println("DBAddr not set, use default value: ./db.sqlite")
 		config.DBAddr = "./db.sqlite"
+	}
+
+	for i, upstream := range config.Upstreams {
+		// parse upstream endpoint URL
+		endpoint, err := url.Parse(upstream.Endpoint)
+		if err != nil {
+			log.Fatalf("Can't parse upstream endpoint URL '%s': %s", upstream.Endpoint, err)
+		}
+		config.Upstreams[i].URL = endpoint
 	}
 
 	return config
