@@ -113,12 +113,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			log.Println("upstream return not 200 and should not response", r.StatusCode)
 			return errors.New("upstream return not 200 and should not response")
 		}
-		r.Header.Del("Access-Control-Allow-Origin")
-		r.Header.Del("Access-Control-Allow-Methods")
-		r.Header.Del("Access-Control-Allow-Headers")
-		r.Header.Set("Access-Control-Allow-Origin", "*")
-		r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		r.Header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
 
 		if r.StatusCode != 200 {
 			body, err := io.ReadAll(r.Body)

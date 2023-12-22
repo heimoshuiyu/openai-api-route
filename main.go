@@ -85,12 +85,11 @@ func main() {
 		})
 	})
 
+	// CORS middleware
+	engine.Use(corsMiddleware())
+
 	// CORS handler
 	engine.OPTIONS("/v1/*any", func(ctx *gin.Context) {
-		header := ctx.Writer.Header()
-		header.Set("Access-Control-Allow-Origin", "*")
-		header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		header.Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
 		ctx.AbortWithStatus(200)
 	})
 
