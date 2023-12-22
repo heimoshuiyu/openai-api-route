@@ -73,6 +73,9 @@ func main() {
 	m.SetMetricPath("/v1/metrics")
 	m.Use(engine)
 
+	// CORS middleware
+	engine.Use(corsMiddleware())
+
 	// error handle middleware
 	engine.Use(func(c *gin.Context) {
 		c.Next()
@@ -84,9 +87,6 @@ func main() {
 			"error": errText,
 		})
 	})
-
-	// CORS middleware
-	engine.Use(corsMiddleware())
 
 	// CORS handler
 	engine.OPTIONS("/v1/*any", func(ctx *gin.Context) {
@@ -114,7 +114,10 @@ func main() {
 
 		// check authorization header
 		if !*noauth {
-			if handleAuth(c) != nil {
+			err := handleAuth(c)
+			if err != nil {
+				c.Header("Content-Type", "application/json")
+				c.AbortWithError(403, err)
 				return
 			}
 		}

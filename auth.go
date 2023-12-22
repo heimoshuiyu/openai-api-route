@@ -14,7 +14,6 @@ func handleAuth(c *gin.Context) error {
 	authorization := c.Request.Header.Get("Authorization")
 	if !strings.HasPrefix(authorization, "Bearer") {
 		err = errors.New("authorization header should start with 'Bearer'")
-		c.AbortWithError(403, err)
 		return err
 	}
 
@@ -24,7 +23,6 @@ func handleAuth(c *gin.Context) error {
 	for _, auth := range strings.Split(config.Authorization, ",") {
 		if authorization != strings.Trim(auth, " ") {
 			err = errors.New("wrong authorization header")
-			c.AbortWithError(403, err)
 			return err
 		}
 	}
