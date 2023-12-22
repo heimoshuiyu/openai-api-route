@@ -105,12 +105,14 @@ func main() {
 			Authorization: c.Request.Header.Get("Authorization"),
 			UserAgent:     c.Request.Header.Get("User-Agent"),
 		}
-		defer func() {
-			if err := recover(); err != nil {
-				log.Println("Error:", err)
-				c.AbortWithError(500, fmt.Errorf("%s", err))
-			}
-		}()
+		/*
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("Error:", err)
+					c.AbortWithError(500, fmt.Errorf("%s", err))
+				}
+			}()
+		*/
 
 		// check authorization header
 		if !*noauth {

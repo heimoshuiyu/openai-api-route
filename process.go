@@ -28,7 +28,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	// reverse proxy
 	remote, err := url.Parse(upstream.Endpoint)
 	if err != nil {
-		c.AbortWithError(500, errors.New("can't parse reverse proxy remote URL"))
 		return err
 	}
 
@@ -38,6 +37,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	proxy.Director = nil
 	var inBody []byte
 	proxy.Rewrite = func(proxyRequest *httputil.ProxyRequest) {
+
 		in := proxyRequest.In
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -48,7 +48,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// read request body
 		inBody, err = io.ReadAll(in.Body)
 		if err != nil {
-			c.AbortWithError(502, errors.New("reverse proxy middleware failed to read request body "+err.Error()))
+			errCtx = errors.New("reverse proxy middleware failed to read request body " + err.Error())
 			return
 		}
 
@@ -80,6 +80,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 				log.Println("Timeout upstream", upstream.Endpoint)
 				errCtx = errors.New("timeout")
 				if shouldResponse {
+					c.Header("Content-Type", "application/json")
 					c.AbortWithError(502, errCtx)
 				}
 				cancel()
@@ -138,6 +139,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 		// abort to error handle
 		if shouldResponse {
+			c.Header("Content-Type", "application/json")
 			c.AbortWithError(502, err)
 		}
 
