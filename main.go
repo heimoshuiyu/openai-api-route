@@ -150,6 +150,11 @@ func main() {
 
 		// async record request
 		go func() {
+			// turncate request if too long
+			if len(record.Body) > 1024*128 {
+				log.Println("Warning: Truncate request body")
+				record.Body = record.Body[:1024*128]
+			}
 			if db.Create(&record).Error != nil {
 				log.Println("Error to save record:", record)
 			}
