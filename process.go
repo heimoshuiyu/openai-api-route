@@ -110,6 +110,18 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		haveResponse = true
 		record.ResponseTime = time.Now().Sub(record.CreatedAt)
 		record.Status = r.StatusCode
+
+		// handle reverse proxy cors header if upstream do not set that
+		if r.Header.Get("Access-Control-Allow-Origin") == "" {
+			c.Header("Access-Control-Allow-Origin", "*")
+		}
+		if r.Header.Get("Access-Control-Allow-Methods") == "" {
+			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+		}
+		if r.Header.Get("Access-Control-Allow-Headers") == "" {
+			c.Header("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+		}
+
 		if !shouldResponse && r.StatusCode != 200 {
 			log.Println("upstream return not 200 and should not response", r.StatusCode)
 			return errors.New("upstream return not 200 and should not response")
