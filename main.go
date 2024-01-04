@@ -147,9 +147,14 @@ func main() {
 
 		log.Println("Record result:", record.Status, record.Response)
 		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
-		if db.Create(&record).Error != nil {
-			log.Println("Error to save record:", record)
-		}
+
+		// async record request
+		go func() {
+			if db.Create(&record).Error != nil {
+				log.Println("Error to save record:", record)
+			}
+		}()
+
 		if record.Status != 200 {
 			errMessage := fmt.Sprintf("IP: %s request %s error %d with %s", record.IP, record.Model, record.Status, record.Response)
 			go sendFeishuMessage(errMessage)
