@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -24,11 +25,11 @@ func main() {
 	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
 	flag.Parse()
 
-	log.Println("Service starting")
+	log.Println("[main]: Service starting")
 
 	// load all upstreams
 	config = readConfig(*configFile)
-	log.Println("Load upstreams number:", len(config.Upstreams))
+	log.Println("[main]: Load upstreams number:", len(config.Upstreams))
 
 	// connect to database
 	var db *gorm.DB
@@ -40,7 +41,7 @@ func main() {
 			SkipDefaultTransaction: true,
 		})
 		if err != nil {
-			log.Fatalf("Error to connect sqlite database: %s", err)
+			log.Fatalf("[main]: Error to connect sqlite database: %s", err)
 		}
 	case "postgres":
 		db, err = gorm.Open(postgres.Open(config.DBAddr), &gorm.Config{
@@ -48,14 +49,14 @@ func main() {
 			SkipDefaultTransaction: true,
 		})
 		if err != nil {
-			log.Fatalf("Error to connect postgres database: %s", err)
+			log.Fatalf("[main]: Error to connect postgres database: %s", err)
 		}
 	default:
-		log.Fatalf("Unsupported database type: '%s'", config.DBType)
+		log.Fatalf("[main]: Unsupported database type: '%s'", config.DBType)
 	}
 
 	db.AutoMigrate(&Record{})
-	log.Println("Auto migrate database done")
+	log.Println("[main]: Auto migrate database done")
 
 	if *listMode {
 		fmt.Println("SK\tEndpoint")
@@ -130,7 +131,7 @@ func main() {
 
 		for index, upstream := range config.Upstreams {
 			if upstream.Endpoint == "" || upstream.SK == "" {
-				c.AbortWithError(500, fmt.Errorf("invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
+				c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
 				continue
 			}
 
@@ -142,30 +143,37 @@ func main() {
 
 			err = processRequest(c, &upstream, &record, shouldResponse)
 			if err != nil {
-				log.Println("Error from upstream", upstream.Endpoint, "should retry", err)
+				if err == http.ErrAbortHandler {
+					abortErr := "[processRequest.done]: AbortHandler, client's connection lost?, no upstream will try, stop here"
+					log.Println(abortErr)
+					record.Response += abortErr
+					record.Status = 500
+					break
+				}
+				log.Println("[processRequest.done]: Error from upstream", upstream.Endpoint, "should retry", err)
 				continue
 			}
 
 			break
 		}
 
-		log.Println("Record result:", record.Status, record.Response)
+		log.Println("[final]: Record result:", record.Status, record.Response)
 		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
 
 		// async record request
 		go func() {
 			// turncate request if too long
 			if len(record.Body) > 1024*128 {
-				log.Println("Warning: Truncate request body")
+				log.Println("[async.record]: Warning: Truncate request body")
 				record.Body = record.Body[:1024*128]
 			}
 			if db.Create(&record).Error != nil {
-				log.Println("Error to save record:", record)
+				log.Println("[async.record]: Error to save record:", record)
 			}
 		}()
 
 		if record.Status != 200 {
-			errMessage := fmt.Sprintf("IP: %s request %s error %d with %s", record.IP, record.Model, record.Status, record.Response)
+			errMessage := fmt.Sprintf("[result.error]: IP: %s request %s error %d with %s", record.IP, record.Model, record.Status, record.Response)
 			go sendFeishuMessage(errMessage)
 			go sendMatrixMessage(errMessage)
 		}

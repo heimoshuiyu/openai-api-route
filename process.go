@@ -31,6 +31,10 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		return err
 	}
 
+	remote.Path = upstream.URL.Path + strings.TrimPrefix(c.Request.URL.Path, "/v1")
+	log.Println("[proxy.begin]:", remote)
+	log.Println("[proxy.begin]: shouldResposne:", shouldResponse)
+
 	haveResponse := false
 
 	proxy := httputil.NewSingleHostReverseProxy(remote)
@@ -48,7 +52,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// read request body
 		inBody, err = io.ReadAll(in.Body)
 		if err != nil {
-			errCtx = errors.New("reverse proxy middleware failed to read request body " + err.Error())
+			errCtx = errors.New("[proxy.rewrite]: reverse proxy middleware failed to read request body " + err.Error())
 			return
 		}
 
@@ -77,7 +81,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		go func() {
 			time.Sleep(timeout)
 			if !haveResponse {
-				log.Println("Timeout upstream", upstream.Endpoint)
+				log.Println("[proxy.timeout]: Timeout upstream", upstream.Endpoint, timeout)
 				errCtx = errors.New("timeout")
 				if shouldResponse {
 					c.Header("Content-Type", "application/json")
@@ -92,8 +96,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		out.Host = remote.Host
 		out.URL.Scheme = remote.Scheme
 		out.URL.Host = remote.Host
-
-		out.URL.Path = upstream.URL.Path + strings.TrimPrefix(in.URL.Path, "/v1")
 
 		out.Header = http.Header{}
 		out.Header.Set("Host", remote.Host)
@@ -123,19 +125,20 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		}
 
 		if !shouldResponse && r.StatusCode != 200 {
-			log.Println("upstream return not 200 and should not response", r.StatusCode)
+			log.Println("[proxy.modifyResponse]: upstream return not 200 and should not response", r.StatusCode)
 			return errors.New("upstream return not 200 and should not response")
 		}
 
 		if r.StatusCode != 200 {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				record.Response += "[Error]: failed to read response from upstream " + err.Error()
-				return errors.New(record.Response)
+				errRet := errors.New("[proxy.modifyResponse]: failed to read response from upstream " + err.Error())
+				return errRet
 			}
-			record.Response += fmt.Sprintf("[Error]: openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
+			errRet := errors.New(fmt.Sprintf("[error]: openai-api-route upstream return '%s' with '%s'", r.Status, string(body)))
+			log.Println(errRet)
 			record.Status = r.StatusCode
-			return fmt.Errorf(record.Response)
+			return errRet
 		}
 		// count success
 		r.Body = io.NopCloser(io.TeeReader(r.Body, &buf))
@@ -145,7 +148,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		haveResponse = true
 		record.ResponseTime = time.Now().Sub(record.CreatedAt)
-		log.Println("Error", err, upstream.SK, upstream.Endpoint)
+		log.Println("[proxy.errorHandler]", err, upstream.SK, upstream.Endpoint)
 
 		errCtx = err
 
@@ -155,21 +158,26 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			c.AbortWithError(502, err)
 		}
 
-		log.Println("response is", r.Response)
+		log.Println("[proxy.errorHandler]: response is", r.Response)
 
 		if record.Status == 0 {
 			record.Status = 502
 		}
-		if record.Response == "" {
-			record.Response += "[Error]: " + err.Error()
-		}
+		record.Response += "[proxy.ErrorHandler]: " + err.Error()
 		if r.Response != nil {
 			record.Status = r.Response.StatusCode
 		}
 
 	}
 
-	proxy.ServeHTTP(c.Writer, c.Request)
+	err = ServeHTTP(proxy, c.Writer, c.Request)
+	if err != nil {
+		log.Println("[proxy.serve]: error from ServeHTTP:", err)
+		// panic means client has abort the http connection
+		// since the connection is lost, we return
+		// and the reverse process should not try the next upsteam
+		return http.ErrAbortHandler
+	}
 
 	// return context error
 	if errCtx != nil {
@@ -197,7 +205,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 				err := json.Unmarshal([]byte(line), &chunk)
 				if err != nil {
-					log.Println(err)
+					log.Println("[proxy.parseChunkError]:", err)
 					continue
 				}
 
@@ -210,20 +218,20 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			var fetchResp FetchModeResponse
 			err := json.Unmarshal(resp, &fetchResp)
 			if err != nil {
-				log.Println("Error parsing fetch response:", err)
+				log.Println("[proxy.parseJSONError]: error parsing fetch response:", err)
 				return nil
 			}
 			if !strings.HasPrefix(fetchResp.Model, "gpt-") {
-				log.Println("Not GPT model, skip recording response:", fetchResp.Model)
+				log.Println("[proxy.record]: Not GPT model, skip recording response:", fetchResp.Model)
 				return nil
 			}
 			if len(fetchResp.Choices) == 0 {
-				log.Println("Error: fetch response choice length is 0")
+				log.Println("[proxy.record]: Error: fetch response choice length is 0")
 				return nil
 			}
 			record.Response = fetchResp.Choices[0].Message.Content
 		} else {
-			log.Println("Unknown content type", contentType)
+			log.Println("[proxy.record]: Unknown content type", contentType)
 		}
 	}
 
