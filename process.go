@@ -130,10 +130,10 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		if r.StatusCode != 200 {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				record.Response = "failed to read response from upstream " + err.Error()
+				record.Response += "[Error]: failed to read response from upstream " + err.Error()
 				return errors.New(record.Response)
 			}
-			record.Response = fmt.Sprintf("openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
+			record.Response += fmt.Sprintf("[Error]: openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
 			record.Status = r.StatusCode
 			return fmt.Errorf(record.Response)
 		}
@@ -161,7 +161,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			record.Status = 502
 		}
 		if record.Response == "" {
-			record.Response = err.Error()
+			record.Response += "[Error]: " + err.Error()
 		}
 		if r.Response != nil {
 			record.Status = r.Response.StatusCode
