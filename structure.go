@@ -17,9 +17,11 @@ type Config struct {
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
 }
 type OPENAI_UPSTREAM struct {
-	SK       string `yaml:"sk"`
-	Endpoint string `yaml:"endpoint"`
-	Timeout  int64  `yaml:"timeout"`
+	SK       string   `yaml:"sk"`
+	Endpoint string   `yaml:"endpoint"`
+	Timeout  int64    `yaml:"timeout"`
+	Allow    []string `yaml:"allow"`
+	Deny     []string `yaml:"deny"`
 	URL      *url.URL
 }
 

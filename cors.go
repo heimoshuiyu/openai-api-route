@@ -20,3 +20,9 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 	}
 }
+
+func sendCORSHeaders(c *gin.Context) {
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+	c.Header("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+}

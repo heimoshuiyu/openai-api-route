@@ -11,6 +11,10 @@ dbaddr: ./db.sqlite
 upstreams:
   - sk: "secret_key_1"
     endpoint: "https://api.openai.com/v2"
+    allow: ["gpt-3.5-trubo"]  # 可选的模型白名单
   - sk: "secret_key_2"
     endpoint: "https://api.openai.com/v1"
     timeout: 30
+    allow: ["gpt-3.5-trubo"] # 可选的模型白名单
+    deny: ["gpt-4"] # 可选的模型黑名单
+    # 若白名单和黑名单同时设置，先判断白名单，再判断黑名单

@@ -110,20 +110,13 @@ func main() {
 			Authorization: c.Request.Header.Get("Authorization"),
 			UserAgent:     c.Request.Header.Get("User-Agent"),
 		}
-		/*
-			defer func() {
-				if err := recover(); err != nil {
-					log.Println("Error:", err)
-					c.AbortWithError(500, fmt.Errorf("%s", err))
-				}
-			}()
-		*/
 
 		// check authorization header
 		if !*noauth {
 			err := handleAuth(c)
 			if err != nil {
 				c.Header("Content-Type", "application/json")
+				sendCORSHeaders(c)
 				c.AbortWithError(403, err)
 				return
 			}
@@ -131,6 +124,7 @@ func main() {
 
 		for index, upstream := range config.Upstreams {
 			if upstream.Endpoint == "" || upstream.SK == "" {
+				sendCORSHeaders(c)
 				c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
 				continue
 			}
