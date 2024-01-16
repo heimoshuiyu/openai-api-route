@@ -227,9 +227,5 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		}
 	}
 
-	if len(record.Body) > 1024*512 {
-		record.Body = ""
-	}
-
 	return nil
 }
