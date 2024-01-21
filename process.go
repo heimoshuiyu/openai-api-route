@@ -59,6 +59,11 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// record chat message from user
 		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
+		// if there allow list and unknown body, return error
+		if len(upstream.Allow) > 0 && requestBodyOK != nil {
+			errCtx = append(errCtx, errors.New("[proxy.rewrite]: allow list but unknown model"))
+			return
+		}
 		// record if parse success
 		if requestBodyOK == nil {
 			record.Model = requestBody.Model
