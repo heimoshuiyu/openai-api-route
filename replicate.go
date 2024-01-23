@@ -190,14 +190,10 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 
 			// parse chunk to ReplicateModelResultChunk object
 			chunkObj := &ReplicateModelResultChunk{}
-			log.Println("[processReplicateRequest]: chunk:", chunk)
 			lines := strings.Split(chunk, "\n")
-			log.Println("[processReplicateRequest]: lines:", lines)
 			// first line is event
 			chunkObj.Event = strings.TrimSpace(lines[0])
 			chunkObj.Event = strings.TrimPrefix(chunkObj.Event, "event: ")
-			fmt.Printf("[processReplicateRequest]: chunkObj.Event: '%s'\n", chunkObj.Event)
-			fmt.Printf("Length: %d\n", len(chunkObj.Event))
 			// second line is id
 			chunkObj.ID = strings.TrimSpace(lines[1])
 			chunkObj.ID = strings.TrimPrefix(chunkObj.ID, "id: ")
@@ -277,8 +273,6 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 				return errors.New("[processReplicateRequest]: failed to read response body " + err.Error())
 			}
 
-			log.Println("[processReplicateRequest]: resultBody:", string(resultBody))
-
 			// parse reponse body
 			result = &ReplicateModelResultGet{}
 			err = json.Unmarshal(resultBody, result)
@@ -286,7 +280,6 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(inBody))
 				return errors.New("[processReplicateRequest]: failed to parse response body " + err.Error())
 			}
-			log.Println("[processReplicateRequest]: result:", result)
 
 			if result.Status == "processing" || result.Status == "starting" {
 				time.Sleep(3 * time.Second)
