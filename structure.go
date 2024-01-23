@@ -176,5 +176,5 @@ type OpenAIChatResponseChunk struct {
 type OpenAIChatResponseChunkChoice struct {
 	Index        int64             `json:"index"`
 	Delta        OpenAIChatMessage `json:"delta"`
-	FinishReason *string           `json:"finish_reason"`
+	FinishReason string            `json:"finish_reason"`
 }

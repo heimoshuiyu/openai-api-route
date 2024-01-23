@@ -19,6 +19,7 @@ var replicate_model_url_template = "https://api.replicate.com/v1/models/%s/predi
 func processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, shouldResponse bool) error {
 	err := _processReplicateRequest(c, upstream, record, shouldResponse)
 	if shouldResponse {
+		sendCORSHeaders(c)
 		if err != nil {
 			c.AbortWithError(502, err)
 		}
@@ -212,14 +213,16 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 				break
 			}
 
+			sendCORSHeaders(c)
+
 			// create OpenAI response chunk
-			c.SSEvent("", &OpenAIChatResponse{
-				ID:    chunkObj.Event,
+			c.SSEvent("", &OpenAIChatResponseChunk{
+				ID:    "",
 				Model: outResponse.Model,
-				Choices: []OpenAIChatResponseChoice{
+				Choices: []OpenAIChatResponseChunkChoice{
 					{
 						Index: indexCount,
-						Message: OpenAIChatMessage{
+						Delta: OpenAIChatMessage{
 							Role:    "assistant",
 							Content: chunkObj.Data,
 						},
@@ -229,13 +232,14 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 			c.Writer.Flush()
 			indexCount += 1
 		}
-		c.SSEvent("", &OpenAIChatResponse{
+		sendCORSHeaders(c)
+		c.SSEvent("", &OpenAIChatResponseChunk{
 			ID:    "",
 			Model: outResponse.Model,
-			Choices: []OpenAIChatResponseChoice{
+			Choices: []OpenAIChatResponseChunkChoice{
 				{
 					Index: indexCount,
-					Message: OpenAIChatMessage{
+					Delta: OpenAIChatMessage{
 						Role:    "assistant",
 						Content: "",
 					},
@@ -315,6 +319,7 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 		record.Status = 200
 
 		// gin return
+		sendCORSHeaders(c)
 		c.JSON(200, openAIResult)
 
 	}
