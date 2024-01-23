@@ -62,11 +62,11 @@ func readConfig(filepath string) Config {
 			log.Fatalf("Can't parse upstream endpoint URL '%s': %s", upstream.Endpoint, err)
 		}
 		config.Upstreams[i].URL = endpoint
-		if upstream.Type == "" {
-			upstream.Type = "openai"
+		if config.Upstreams[i].Type == "" {
+			config.Upstreams[i].Type = "openai"
 		}
-		if (upstream.Type != "openai") && (upstream.Type != "replicate") {
-			log.Fatalf("Unsupported upstream type '%s'", upstream.Type)
+		if (config.Upstreams[i].Type != "openai") && (config.Upstreams[i].Type != "replicate") {
+			log.Fatalf("Unsupported upstream type '%s'", config.Upstreams[i].Type)
 		}
 	}
 
