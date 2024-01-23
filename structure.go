@@ -85,7 +85,7 @@ type OpenAIChatRequest struct {
 
 type OpenAIChatRequestMessage struct {
 	Content string `json:"content"`
-	User    string `json:"user"`
+	Role    string `json:"role"`
 }
 
 type ReplicateModelRequest struct {
