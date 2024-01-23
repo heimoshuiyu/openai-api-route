@@ -11,6 +11,7 @@
 - 识别 ChatCompletions Stream 请求，针对 Stream 请求使用 5 秒超时。具体超时策略请参阅 [超时策略](#超时策略) 一节
 - 记录完整的请求内容、使用的上游、IP 地址、响应时间以及 GPT 回复文本
 - 请求出错时发送 飞书 或 Matrix 消息通知
+- 支持 Replicate 平台上的模型
 
 本文档详细介绍了如何使用负载均衡和能力 API 的方法和端点。
 
@@ -98,6 +99,9 @@ dbaddr: ./db.sqlite
 # dbaddr: "host=127.0.0.1 port=5432 user=postgres dbname=openai_api_route sslmode=disable password=woshimima"
 
 upstreams:
+  - sk: "key_for_replicate"
+    type: replicate
+    allow: ["mistralai/mixtral-8x7b-instruct-v0.1"]
   - sk: "secret_key_1"
     endpoint: "https://api.openai.com/v2"
   - sk: "secret_key_2"
@@ -108,6 +112,12 @@ upstreams:
 请注意，程序会根据情况修改 timeout 的值
 
 您可以直接运行 `./openai-api-route` 命令，如果数据库不存在，系统会自动创建。
+
+## 模型允许与屏蔽列表
+
+如果对某个上游设置了 allow 或 deny 列表，则负载均衡只允许或禁用用户使用这些模型。负载均衡程序会先判断白名单，再判断黑名单。
+
+如果你混合使用 OpenAI 和 Replicate 平台的模型，你可能需要分别为 OpenAI 和 Replicate 上游设置他们各自的允许列表，否则用户请求 OpenAI 的模型时可能会发送到 Replicate 平台
 
 ## 超时策略
 

@@ -123,9 +123,9 @@ func main() {
 		}
 
 		for index, upstream := range config.Upstreams {
-			if upstream.Endpoint == "" || upstream.SK == "" {
+			if upstream.SK == "" {
 				sendCORSHeaders(c)
-				c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild upstream '%s' '%s'", upstream.SK, upstream.Endpoint))
+				c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild SK (secret key) '%s'", upstream.SK))
 				continue
 			}
 
@@ -135,7 +135,14 @@ func main() {
 				upstream.Timeout = 120
 			}
 
-			err = processRequest(c, &upstream, &record, shouldResponse)
+			if upstream.Type == "replicate" {
+				err = processReplicateRequest(c, &upstream, &record, shouldResponse)
+			} else if upstream.Type == "openai" {
+				err = processRequest(c, &upstream, &record, shouldResponse)
+			} else {
+				err = fmt.Errorf("[processRequest.begin]: unsupported upstream type '%s'", upstream.Type)
+			}
+
 			if err != nil {
 				if err == http.ErrAbortHandler {
 					abortErr := "[processRequest.done]: AbortHandler, client's connection lost?, no upstream will try, stop here"
