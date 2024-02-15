@@ -31,7 +31,12 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		return err
 	}
 
-	remote.Path = upstream.URL.Path + strings.TrimPrefix(c.Request.URL.Path, "/v1")
+	path := strings.TrimPrefix(c.Request.URL.Path, "/v1")
+	// recoognize whisper url
+	if strings.HasPrefix(path, "/audio/transcriptions") || strings.HasPrefix(path, "/audio/translations") {
+		record.Model = "whisper"
+	}
+	remote.Path = upstream.URL.Path + path
 	log.Println("[proxy.begin]:", remote)
 	log.Println("[proxy.begin]: shouldResposne:", shouldResponse)
 
@@ -59,35 +64,31 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// record chat message from user
 		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
-		// if there allow list and unknown body, return error
-		if len(upstream.Allow) > 0 && requestBodyOK != nil {
-			errCtx = append(errCtx, errors.New("[proxy.rewrite]: allow list but unknown model"))
-			return
-		}
 		// record if parse success
-		if requestBodyOK == nil {
+		if requestBodyOK == nil && record.Model != "" {
 			record.Model = requestBody.Model
-			// check allow list
-			if len(upstream.Allow) > 0 {
-				isAllow := false
-				for _, allow := range upstream.Allow {
-					if allow == requestBody.Model {
-						isAllow = true
-						break
-					}
-				}
-				if !isAllow {
-					errCtx = append(errCtx, errors.New("[proxy.rewrite]: model not allowed"))
-					return
+		}
+
+		// check allow list
+		if len(upstream.Allow) > 0 {
+			isAllow := false
+			for _, allow := range upstream.Allow {
+				if allow == record.Model {
+					isAllow = true
+					break
 				}
 			}
-			// check block list
-			if len(upstream.Deny) > 0 {
-				for _, deny := range upstream.Deny {
-					if deny == requestBody.Model {
-						errCtx = append(errCtx, errors.New("[proxy.rewrite]: model denied"))
-						return
-					}
+			if !isAllow {
+				errCtx = append(errCtx, errors.New("[proxy.rewrite]: model not allowed"))
+				return
+			}
+		}
+		// check block list
+		if len(upstream.Deny) > 0 {
+			for _, deny := range upstream.Deny {
+				if deny == record.Model {
+					errCtx = append(errCtx, errors.New("[proxy.rewrite]: model denied"))
+					return
 				}
 			}
 		}
@@ -178,7 +179,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		haveResponse = true
 		record.ResponseTime = time.Now().Sub(record.CreatedAt)
-		log.Println("[proxy.errorHandler]", err, upstream.SK, upstream.Endpoint)
+		log.Println("[proxy.errorHandler]", err, upstream.SK, upstream.Endpoint, errCtx)
 
 		errCtx = append(errCtx, err)
 
@@ -248,6 +249,10 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 				}
 				record.Response += chunk.Choices[0].Delta.Content
 			}
+		} else if strings.HasPrefix(contentType, "text") && strings.HasPrefix(record.Model, "whisper") {
+			// whisper model response
+			record.Response = string(resp)
+			record.Body = ""
 		} else if strings.HasPrefix(contentType, "application/json") {
 			var fetchResp FetchModeResponse
 			err := json.Unmarshal(resp, &fetchResp)
