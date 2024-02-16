@@ -17,13 +17,16 @@ type Config struct {
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
 }
 type OPENAI_UPSTREAM struct {
-	SK       string   `yaml:"sk"`
-	Endpoint string   `yaml:"endpoint"`
-	Timeout  int64    `yaml:"timeout"`
-	Allow    []string `yaml:"allow"`
-	Deny     []string `yaml:"deny"`
-	Type     string   `yaml:"type"`
-	URL      *url.URL
+	SK            string   `yaml:"sk"`
+	Endpoint      string   `yaml:"endpoint"`
+	Timeout       int64    `yaml:"timeout"`
+	Allow         []string `yaml:"allow"`
+	Deny          []string `yaml:"deny"`
+	Type          string   `yaml:"type"`
+	KeepHeader    bool     `yaml:"keep_header"`
+	Authorization string   `yaml:"authorization"`
+	Noauth        bool     `yaml:"noauth"`
+	URL           *url.URL
 }
 
 func readConfig(filepath string) Config {
@@ -67,6 +70,10 @@ func readConfig(filepath string) Config {
 		}
 		if (config.Upstreams[i].Type != "openai") && (config.Upstreams[i].Type != "replicate") {
 			log.Fatalf("Unsupported upstream type '%s'", config.Upstreams[i].Type)
+		}
+		// apply authorization from global config if not set
+		if config.Upstreams[i].Authorization == "" && !config.Upstreams[i].Noauth {
+			config.Upstreams[i].Authorization = config.Authorization
 		}
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -99,7 +100,7 @@ func main() {
 	})
 
 	engine.POST("/v1/*any", func(c *gin.Context) {
-		hostname, err := os.Hostname()
+		hostname, _ := os.Hostname()
 		if config.Hostname != "" {
 			hostname = config.Hostname
 		}
@@ -112,16 +113,14 @@ func main() {
 			Model:         c.Request.URL.Path,
 		}
 
-		// check authorization header
-		if !*noauth {
-			err := handleAuth(c)
-			if err != nil {
-				c.Header("Content-Type", "application/json")
-				sendCORSHeaders(c)
-				c.AbortWithError(403, err)
-				return
-			}
+		authorization := c.Request.Header.Get("Authorization")
+		if strings.HasPrefix(authorization, "Bearer") {
+			authorization = strings.Trim(authorization[len("Bearer"):], " ")
+		} else {
+			authorization = strings.Trim(authorization, " ")
+			log.Println("[auth] Warning: authorization header should start with 'Bearer'")
 		}
+		log.Println("Received authorization '" + authorization + "'")
 
 		for index, upstream := range config.Upstreams {
 			if upstream.SK == "" {
@@ -131,6 +130,20 @@ func main() {
 			}
 
 			shouldResponse := index == len(config.Upstreams)-1
+
+			// check authorization header
+			if !*noauth && !upstream.Noauth {
+				if checkAuth(authorization, upstream.Authorization) != nil {
+					if shouldResponse {
+						c.Header("Content-Type", "application/json")
+						sendCORSHeaders(c)
+						c.AbortWithError(403, fmt.Errorf("[processRequest.begin]: wrong authorization header"))
+					}
+					log.Println("[auth] Authorization header check failed for", upstream.SK, authorization)
+					continue
+				}
+				log.Println("[auth] Authorization header check pass for", upstream.SK, authorization)
+			}
 
 			if len(config.Upstreams) == 1 {
 				upstream.Timeout = 120
@@ -160,15 +173,16 @@ func main() {
 		}
 
 		log.Println("[final]: Record result:", record.Status, record.Response)
-		record.ElapsedTime = time.Now().Sub(record.CreatedAt)
+		record.ElapsedTime = time.Since(record.CreatedAt)
 
 		// async record request
 		go func() {
+			// encoder headers to record.Headers in json string
+			headers, _ := json.Marshal(c.Request.Header)
+			record.Headers = string(headers)
+
 			// turncate request if too long
-			if len(record.Body) > 1024*128 {
-				log.Println("[async.record]: Warning: Truncate request body")
-				record.Body = record.Body[:1024*128]
-			}
+			log.Println("[async.record]: body length:", len(record.Body))
 			if db.Create(&record).Error != nil {
 				log.Println("[async.record]: Error to save record:", record)
 			}

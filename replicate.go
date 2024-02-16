@@ -35,7 +35,6 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 	}
 
 	// record request body
-	record.Body = string(inBody)
 
 	// parse request body
 	inRequest := &OpenAIChatRequest{}
@@ -357,7 +356,7 @@ func _processReplicateRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record 
 			FinishReason: "stop",
 		})
 
-		record.Body = strings.Join(result.Output, "")
+		record.Response = strings.Join(result.Output, "")
 		record.Status = 200
 
 		// gin return

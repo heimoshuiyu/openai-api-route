@@ -59,11 +59,11 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		}
 
 		// record chat message from user
-		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
 		// record if parse success
 		if requestBodyOK == nil && requestBody.Model != "" {
 			record.Model = requestBody.Model
+			record.Body = string(inBody)
 		}
 
 		// check allow list
@@ -125,7 +125,9 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		out.URL.Scheme = remote.Scheme
 		out.URL.Host = remote.Host
 
-		out.Header = http.Header{}
+		if !upstream.KeepHeader {
+			out.Header = http.Header{}
+		}
 		out.Header.Set("Host", remote.Host)
 		if upstream.SK == "asis" {
 			out.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
@@ -138,7 +140,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	var contentType string
 	proxy.ModifyResponse = func(r *http.Response) error {
 		haveResponse = true
-		record.ResponseTime = time.Now().Sub(record.CreatedAt)
+		record.ResponseTime = time.Since(record.CreatedAt)
 		record.Status = r.StatusCode
 
 		// handle reverse proxy cors header if upstream do not set that
@@ -163,7 +165,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 				errRet := errors.New("[proxy.modifyResponse]: failed to read response from upstream " + err.Error())
 				return errRet
 			}
-			errRet := errors.New(fmt.Sprintf("[error]: openai-api-route upstream return '%s' with '%s'", r.Status, string(body)))
+			errRet := fmt.Errorf("[error]: openai-api-route upstream return '%s' with '%s'", r.Status, string(body))
 			log.Println(errRet)
 			record.Status = r.StatusCode
 			return errRet
@@ -175,7 +177,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		haveResponse = true
-		record.ResponseTime = time.Now().Sub(record.CreatedAt)
+		record.ResponseTime = time.Since(record.CreatedAt)
 		log.Println("[proxy.errorHandler]", err, upstream.SK, upstream.Endpoint, errCtx)
 
 		errCtx = append(errCtx, err)
@@ -224,13 +226,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		log.Println(record.Response)
 	} else {
 
-		// record request body
-		if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") {
-			record.Body = string(inBody)
-		} else {
-			record.Body = "binary data"
-		}
-
 		// record response
 		// stream mode
 		if strings.HasPrefix(contentType, "text/event-stream") {
@@ -256,21 +251,17 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		} else if strings.HasPrefix(contentType, "text") {
 			record.Response = string(resp)
 		} else if strings.HasPrefix(contentType, "application/json") {
+			// fallback record response
+			if len(resp) < 1024*128 {
+				record.Response = string(resp)
+			}
 			var fetchResp FetchModeResponse
 			err := json.Unmarshal(resp, &fetchResp)
-			if err != nil {
-				log.Println("[proxy.parseJSONError]: error parsing fetch response:", err)
-				return nil
+			if err == nil {
+				if len(fetchResp.Choices) > 0 {
+					record.Response = fetchResp.Choices[0].Message.Content
+				}
 			}
-			if !strings.HasPrefix(fetchResp.Model, "gpt-") {
-				log.Println("[proxy.record]: Not GPT model, skip recording response:", fetchResp.Model)
-				return nil
-			}
-			if len(fetchResp.Choices) == 0 {
-				log.Println("[proxy.record]: Error: fetch response choice length is 0")
-				return nil
-			}
-			record.Response = fetchResp.Choices[0].Message.Content
 		} else {
 			log.Println("[proxy.record]: Unknown content type", contentType)
 		}

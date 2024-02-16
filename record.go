@@ -19,6 +19,7 @@ type Record struct {
 	Status           int
 	Authorization    string // the autorization header send by client
 	UserAgent        string
+	Headers          string
 }
 
 type StreamModeChunk struct {
