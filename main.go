@@ -109,6 +109,7 @@ func main() {
 			CreatedAt:     time.Now(),
 			Authorization: c.Request.Header.Get("Authorization"),
 			UserAgent:     c.Request.Header.Get("User-Agent"),
+			Model:         c.Request.URL.Path,
 		}
 
 		// check authorization header

@@ -33,9 +33,6 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 
 	path := strings.TrimPrefix(c.Request.URL.Path, "/v1")
 	// recoognize whisper url
-	if strings.HasPrefix(path, "/audio/transcriptions") || strings.HasPrefix(path, "/audio/translations") {
-		record.Model = "whisper"
-	}
 	remote.Path = upstream.URL.Path + path
 	log.Println("[proxy.begin]:", remote)
 	log.Println("[proxy.begin]: shouldResposne:", shouldResponse)
@@ -65,7 +62,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
 		// record if parse success
-		if requestBodyOK == nil && record.Model == "" {
+		if requestBodyOK == nil && requestBody.Model != "" {
 			record.Model = requestBody.Model
 		}
 
