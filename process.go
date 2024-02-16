@@ -224,6 +224,13 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		log.Println(record.Response)
 	} else {
 
+		// record request body
+		if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") {
+			record.Body = string(inBody)
+		} else {
+			record.Body = "binary data"
+		}
+
 		// record response
 		// stream mode
 		if strings.HasPrefix(contentType, "text/event-stream") {
@@ -246,10 +253,8 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 				}
 				record.Response += chunk.Choices[0].Delta.Content
 			}
-		} else if strings.HasPrefix(contentType, "text") && strings.HasPrefix(record.Model, "whisper") {
-			// whisper model response
+		} else if strings.HasPrefix(contentType, "text") {
 			record.Response = string(resp)
-			record.Body = ""
 		} else if strings.HasPrefix(contentType, "application/json") {
 			var fetchResp FetchModeResponse
 			err := json.Unmarshal(resp, &fetchResp)
