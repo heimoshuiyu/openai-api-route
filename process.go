@@ -65,7 +65,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		record.Body = string(inBody)
 		requestBody, requestBodyOK := ParseRequestBody(inBody)
 		// record if parse success
-		if requestBodyOK == nil && record.Model != "" {
+		if requestBodyOK == nil && record.Model == "" {
 			record.Model = requestBody.Model
 		}
 
@@ -79,7 +79,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 				}
 			}
 			if !isAllow {
-				errCtx = append(errCtx, errors.New("[proxy.rewrite]: model not allowed"))
+				errCtx = append(errCtx, errors.New("[proxy.rewrite]: model '"+record.Model+"' not allowed"))
 				return
 			}
 		}
@@ -87,7 +87,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		if len(upstream.Deny) > 0 {
 			for _, deny := range upstream.Deny {
 				if deny == record.Model {
-					errCtx = append(errCtx, errors.New("[proxy.rewrite]: model denied"))
+					errCtx = append(errCtx, errors.New("[proxy.rewrite]: model '"+record.Model+"' denied"))
 					return
 				}
 			}
