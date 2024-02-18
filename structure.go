@@ -14,12 +14,15 @@ type Config struct {
 	DBType        string            `yaml:"dbtype"`
 	DBAddr        string            `yaml:"dbaddr"`
 	Authorization string            `yaml:"authorization"`
+	Timeout       int64             `yaml:"timeout"`
+	StreamTimeout int64             `yaml:"stream_timeout"`
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
 }
 type OPENAI_UPSTREAM struct {
 	SK            string   `yaml:"sk"`
 	Endpoint      string   `yaml:"endpoint"`
 	Timeout       int64    `yaml:"timeout"`
+	StreamTimeout int64    `yaml:"stream_timeout"`
 	Allow         []string `yaml:"allow"`
 	Deny          []string `yaml:"deny"`
 	Type          string   `yaml:"type"`
@@ -57,6 +60,14 @@ func readConfig(filepath string) Config {
 		log.Println("DBAddr not set, use default value: ./db.sqlite")
 		config.DBAddr = "./db.sqlite"
 	}
+	if config.Timeout == 0 {
+		log.Println("Timeout not set, use default value: 120")
+		config.Timeout = 120
+	}
+	if config.StreamTimeout == 0 {
+		log.Println("StreamTimeout not set, use default value: 10")
+		config.StreamTimeout = 10
+	}
 
 	for i, upstream := range config.Upstreams {
 		// parse upstream endpoint URL
@@ -74,6 +85,12 @@ func readConfig(filepath string) Config {
 		// apply authorization from global config if not set
 		if config.Upstreams[i].Authorization == "" && !config.Upstreams[i].Noauth {
 			config.Upstreams[i].Authorization = config.Authorization
+		}
+		if config.Upstreams[i].Timeout == 0 {
+			config.Upstreams[i].Timeout = config.Timeout
+		}
+		if config.Upstreams[i].StreamTimeout == 0 {
+			config.Upstreams[i].StreamTimeout = config.StreamTimeout
 		}
 	}
 
