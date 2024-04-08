@@ -83,6 +83,30 @@ upstreams:
 
 如此，只有携带 `woshimima` 验证头的用户可以使用该上游。
 
+### 复杂配置示例
+
+```yaml
+
+# 默认验证头
+authorization: woshimima
+
+upstreams:
+
+  # 允许所有人使用的文字转语音
+  - sk: xxx
+    endpoint: http://localhost:5000/v1
+    noauth: true
+    allow:
+      - /v1/audio/transcriptions
+    
+  # guest 专用的 gpt-3.5-turbo-0125 模型
+  - sk: 
+    endpoint: https://api.xxx.local/v1
+    authorization: guest
+    allow:
+      - gpt-3.5-turbo-0125
+```
+
 ## 部署方法
 
 有两种推荐的部署方法：
