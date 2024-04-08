@@ -16,7 +16,7 @@ docker-build:
   services:
     - docker:dind
   variables:
-    CI_REGISTRY: www.waykey.net:7999
+    CI_REGISTRY: gitlab.waykey.net:7999
     CI_REGISTRY_IMAGE: $CI_REGISTRY/spiderman/datamining/openai-api-route
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   before_script:
