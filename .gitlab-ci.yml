@@ -1,27 +1,26 @@
-# You can copy and paste this template into a new `.gitlab-ci.yml` file.
-# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
-#
 # To contribute improvements to CI/CD templates, please follow the Development guide at:
 # https://docs.gitlab.com/ee/development/cicd/templates.html
 # This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
 
-image: golang:latest
+# Build a Docker image with CI/CD and push to the GitLab registry.
+# Docker-in-Docker documentation: https://docs.gitlab.com/ee/ci/docker/using_docker_build.html
+#
+# This template uses one generic job with conditional builds
+# for the default branch and all other (MR) branches.
 
-stages:
-  - build
-  - deploy
-
-build:
+docker-build:
   # Use the official docker image.
   image: docker:cli
   stage: build
   services:
     - docker:dind
   variables:
+    CI_REGISTRY: www.waykey.net:7999
+    CI_REGISTRY_IMAGE: $CI_REGISTRY/spiderman/datamining/openai-api-route
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" https://gitlab.waykey.net:7999
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   # All branches are tagged with $DOCKER_IMAGE_NAME (defaults to commit ref slug)
   # Default branch is also tagged with `latest`
   script:
@@ -37,10 +36,4 @@ build:
     - if: $CI_COMMIT_BRANCH
       exists:
         - Dockerfile
-
-deploy:
-  stage: deploy
-  script: echo "Define your deployment script!"
-  environment: production
-
 
