@@ -37,3 +37,16 @@ docker-build:
       exists:
         - Dockerfile
 
+deploy:
+  environment: production
+  image: kroniak/ssh-client
+  stage: deploy
+  before_script:
+    - chmod 600 $CI_SSH_PRIVATE_KEY
+  script:
+    - ssh -o StrictHostKeyChecking=no -i $CI_SSH_PRIVATE_KEY root@192.168.1.13 "cd /mnt/data/srv/openai-api-route && podman-compose pull && podman-compose down && podman-compose up -d"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      exists:
+        - Dockerfile
+
