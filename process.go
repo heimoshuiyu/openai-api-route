@@ -136,16 +136,13 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		record.ResponseTime = time.Since(record.CreatedAt)
 		record.Status = r.StatusCode
 
-		// handle reverse proxy cors header if upstream do not set that
-		if r.Header.Get("Access-Control-Allow-Origin") == "" {
-			c.Header("Access-Control-Allow-Origin", "*")
-		}
-		if r.Header.Get("Access-Control-Allow-Methods") == "" {
-			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		}
-		if r.Header.Get("Access-Control-Allow-Headers") == "" {
-			c.Header("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
-		}
+		// remove response's cors headers
+		r.Header.Del("Access-Control-Allow-Origin")
+		r.Header.Del("Access-Control-Allow-Methods")
+		r.Header.Del("Access-Control-Allow-Headers")
+		r.Header.Del("access-control-allow-origin")
+		r.Header.Del("access-control-allow-methods")
+		r.Header.Del("access-control-allow-headers")
 
 		if !shouldResponse && r.StatusCode != 200 {
 			log.Println("[proxy.modifyResponse]: upstream return not 200 and should not response", r.StatusCode)
@@ -163,6 +160,8 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 			record.Status = r.StatusCode
 			return errRet
 		}
+		// handle reverse proxy cors header if upstream do not set that
+		sendCORSHeaders(c)
 		// count success
 		r.Body = io.NopCloser(io.TeeReader(r.Body, &buf))
 		contentType = r.Header.Get("content-type")
