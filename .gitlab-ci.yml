@@ -44,7 +44,7 @@ deploy:
   before_script:
     - chmod 600 $CI_SSH_PRIVATE_KEY
   script:
-    - ssh -o StrictHostKeyChecking=no -i $CI_SSH_PRIVATE_KEY root@192.168.1.13 "cd /mnt/data/srv/openai-api-route && podman-compose pull && podman-compose down && podman-compose up -d"
+    - ssh -o StrictHostKeyChecking=no -i $CI_SSH_PRIVATE_KEY root@192.168.1.13 "kubectl rollout restart deployment openai-api-route"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       exists:
