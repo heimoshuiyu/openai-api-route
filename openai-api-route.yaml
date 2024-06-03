@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openai-api-route
+  labels:
+    app: openai-api-route
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: openai-api-route
+  template:
+    metadata:
+      labels:
+        app: openai-api-route
+    spec:
+      imagePullSecrets:
+      - name: spiderman-regcred
+      volumes:
+      - name: config-volume
+        configMap:
+          name: openai-api-route-config
+      containers:
+      - name: openai-api-route
+        image: registry.waykey.net:7999/spiderman/datamining/openai-api-route:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8888
+        resources:
+          requests:
+            memory: "400M"
+          limits:
+            memory: "1000M"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config.yaml
+          subPath:config.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: openai-api-route
+  name: openai-api-route
+  namespace: default
+spec:
+  ports:
+  - port: 8888
+    protocol: TCP
+    targetPort: 8888
+  selector:
+    app: openai-api-route
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openai-api-route
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: openai-api-route.k8s.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openai-api-route
+            port:
+              number: 8888
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openai-api-route-config
+  namespace: default
+data:
+  config.yaml: |
+    authorization: n
+
+    #dbtype: sqlite
+    #dbaddr: /data/db.sqlite
+
+    # 使用 postgres 作为数据库储存请求记录
+    dbtype: postgres
+    dbaddr: "host=192.168.1.20 port=5432 user=waykey dbname=openai_api_route sslmode=disable password=wk24edcRFV43321"
+
+    upstreams:
+      - endpoint: https://api.openai.com/v1
+        sk: YOUR_API_SECRET_KEY
+        timeout: 20
+        deny:
+          - gpt-4-32k
+          - gpt-4-32k-1106
