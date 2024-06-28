@@ -74,9 +74,7 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 
 		shouldResponse := index == len(avaliableUpstreams)-1
 
-		if upstream.Type == "replicate" {
-			err = processReplicateRequest(c, &upstream, &record, shouldResponse)
-		} else if upstream.Type == "openai" {
+		if upstream.Type == "openai" {
 			err = processRequest(c, &upstream, &record, shouldResponse)
 		} else {
 			err = fmt.Errorf("[processRequest.begin]: unsupported upstream type '%s'", upstream.Type)
