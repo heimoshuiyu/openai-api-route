@@ -17,6 +17,14 @@ type Config struct {
 	Timeout       int64             `yaml:"timeout"`
 	StreamTimeout int64             `yaml:"stream_timeout"`
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
+	CliConfig     CliConfig
+}
+
+type CliConfig struct {
+	ConfigFile string
+	ListMode   bool
+	Noauth     bool
+	DBLog      bool
 }
 
 func ReadConfig(filepath string) Config {
