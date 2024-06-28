@@ -54,7 +54,7 @@ func processRequest(c *gin.Context, upstream *OPENAI_UPSTREAM, record *Record, s
 		// read request body
 		inBody, err = io.ReadAll(in.Body)
 		if err != nil {
-			errCtx = append(errCtx, errors.New("[proxy.rewrite]: reverse proxy middleware failed to read request body "+err.Error()))
+			errCtx = append(errCtx, ErrReadRequestBody)
 			return
 		}
 
