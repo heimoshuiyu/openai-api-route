@@ -113,7 +113,7 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 
 	if record.Status != 200 {
 		errMessage := fmt.Sprintf("[result.error]: IP: %s request %s error %d with %s", record.IP, record.Model, record.Status, record.Response)
-		go sendFeishuMessage(errMessage)
-		go sendMatrixMessage(errMessage)
+		go SendFeishuMessage(errMessage)
+		go SendMatrixMessage(errMessage)
 	}
 }

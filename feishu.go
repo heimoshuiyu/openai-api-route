@@ -16,7 +16,7 @@ type FeishuMessageContent struct {
 	Text string `json:"text"`
 }
 
-func sendFeishuMessage(content string) error {
+func SendFeishuMessage(content string) error {
 	messageBytes, err := json.Marshal(&FeishuMessage{
 		MsgType: "text",
 		Content: FeishuMessageContent{

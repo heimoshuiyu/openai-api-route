@@ -13,7 +13,7 @@ type MatrixMessage struct {
 	Body    string `json:"body"`
 }
 
-func sendMatrixMessage(content string) error {
+func SendMatrixMessage(content string) error {
 	messageBytes, marshalErr := json.Marshal(&MatrixMessage{
 		Message: "m.text",
 		Body:    content,
