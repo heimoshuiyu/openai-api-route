@@ -129,32 +129,37 @@ func main() {
 		}
 		log.Println("Received authorization '" + authorization + "'")
 
-		for index, upstream := range config.Upstreams {
+		// build avaliableUpstreams
+		avaliableUpstreams := make([]OPENAI_UPSTREAM, 0)
+		for _, upstream := range config.Upstreams {
+			// noauth mode from cli arguments
+			if !*noauth || upstream.Noauth {
+				avaliableUpstreams = append(avaliableUpstreams, upstream)
+				continue
+			}
+			// check authorization header
+			if checkAuth(authorization, upstream.Authorization) == nil {
+				avaliableUpstreams = append(avaliableUpstreams, upstream)
+				continue
+			}
+		}
+		if len(avaliableUpstreams) == 0 {
+			c.Header("Content-Type", "application/json")
+			sendCORSHeaders(c)
+			c.AbortWithError(403, fmt.Errorf("[processRequest.begin]: no avaliable upstream"))
+			return
+		} else if len(avaliableUpstreams) == 1 {
+			avaliableUpstreams[0].Timeout = 120
+		}
+
+		for index, upstream := range avaliableUpstreams {
 			if upstream.SK == "" {
 				sendCORSHeaders(c)
 				c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild SK (secret key) '%s'", upstream.SK))
 				continue
 			}
 
-			shouldResponse := index == len(config.Upstreams)-1
-
-			// check authorization header
-			if !*noauth && !upstream.Noauth {
-				if checkAuth(authorization, upstream.Authorization) != nil {
-					if shouldResponse {
-						c.Header("Content-Type", "application/json")
-						sendCORSHeaders(c)
-						c.AbortWithError(403, fmt.Errorf("[processRequest.begin]: wrong authorization header"))
-					}
-					log.Println("[auth] Authorization header check failed for", upstream.SK, authorization)
-					continue
-				}
-				log.Println("[auth] Authorization header check pass for", upstream.SK, authorization)
-			}
-
-			if len(config.Upstreams) == 1 {
-				upstream.Timeout = 120
-			}
+			shouldResponse := index == len(avaliableUpstreams)-1
 
 			if upstream.Type == "replicate" {
 				err = processReplicateRequest(c, &upstream, &record, shouldResponse)
