@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ func main() {
 	configFile := flag.String("config", "./config.yaml", "Config file")
 	listMode := flag.Bool("list", false, "List all upstream")
 	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
+	dbLog := flag.Bool("dblog", false, "Enable database log")
 	flag.Parse()
 
 	log.Println("[main]: Service starting")
@@ -55,6 +57,10 @@ func main() {
 		}
 	default:
 		log.Fatalf("[main]: Unsupported database type: '%s'", config.DBType)
+	}
+
+	if *dbLog {
+		db.Logger.LogMode(logger.Info)
 	}
 
 	db.AutoMigrate(&Record{})
