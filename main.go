@@ -73,8 +73,10 @@ func main() {
 		db.Logger.LogMode(logger.Info)
 	}
 
-	db.AutoMigrate(&Record{})
-	log.Println("[main]: Auto migrate database done")
+	if config.DBType != "none" {
+		db.AutoMigrate(&Record{})
+		log.Println("[main]: Auto migrate database done")
+	}
 
 	if *listMode {
 		fmt.Println("SK\tEndpoint")
