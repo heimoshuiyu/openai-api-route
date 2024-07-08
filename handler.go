@@ -100,6 +100,11 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 
 	// async record request
 	go func() {
+		// not record
+		if config.DBType == "none" {
+			return
+		}
+
 		// encoder headers to record.Headers in json string
 		headers, _ := json.Marshal(c.Request.Header)
 		record.Headers = string(headers)

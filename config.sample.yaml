@@ -8,6 +8,9 @@ dbaddr: ./db.sqlite
 # dbtype: postgres
 # dbaddr: "host=127.0.0.1 port=5432 user=postgres dbname=openai_api_route sslmode=disable password=woshimima"
 
+# 不使用数据库记录
+# dbtype: none
+
 upstreams:
   - sk: "secret_key_1"
     endpoint: "https://api.openai.com/v2"

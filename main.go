@@ -57,6 +57,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("[main]: Error to connect postgres database: %s", err)
 		}
+	case "none":
+		log.Println("[main]: No database connection")
 	default:
 		log.Fatalf("[main]: Unsupported database type: '%s'", config.DBType)
 	}
@@ -67,7 +69,7 @@ func main() {
 		DB:     db,
 	}
 
-	if *dbLog {
+	if *dbLog && db != nil {
 		db.Logger.LogMode(logger.Info)
 	}
 
