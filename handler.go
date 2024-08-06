@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -65,10 +64,6 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 		avaliableUpstreams[0].Timeout = 120
 	}
 
-	if config.Random {
-		avaliableUpstreams = shuffle(avaliableUpstreams)
-	}
-
 	for index, upstream := range avaliableUpstreams {
 		var err error
 		if upstream.SK == "" {
@@ -126,9 +121,4 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 		go SendFeishuMessage(errMessage)
 		go SendMatrixMessage(errMessage)
 	}
-}
-
-func shuffle[T any](array []T) []T {
-	rand.Shuffle(len(array), func(i, j int) { array[i], array[j] = array[j], array[i] })
-	return array
 }

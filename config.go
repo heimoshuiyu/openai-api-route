@@ -17,7 +17,6 @@ type Config struct {
 	Timeout       int64             `yaml:"timeout"`
 	StreamTimeout int64             `yaml:"stream_timeout"`
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
-	Random        bool              `yaml:"random"`
 	CliConfig     CliConfig
 }
 
