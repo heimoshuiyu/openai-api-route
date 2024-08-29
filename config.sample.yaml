@@ -1,5 +1,7 @@
 authorization: woshimima
 
+lb_policy: order # 负载均衡策略，可选值为 order 和 random
+
 # 使用 sqlite 作为数据库储存请求记录
 dbtype: sqlite
 dbaddr: ./db.sqlite

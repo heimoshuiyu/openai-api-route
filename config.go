@@ -16,6 +16,7 @@ type Config struct {
 	Authorization string            `yaml:"authorization"`
 	Timeout       int64             `yaml:"timeout"`
 	StreamTimeout int64             `yaml:"stream_timeout"`
+	LBPolicy      string            `yaml:"lb_policy"`
 	Upstreams     []OPENAI_UPSTREAM `yaml:"upstreams"`
 	CliConfig     CliConfig
 }
@@ -63,6 +64,13 @@ func ReadConfig(filepath string) Config {
 		log.Println("StreamTimeout not set, use default value: 10")
 		config.StreamTimeout = 10
 	}
+	if config.LBPolicy == "" {
+		log.Println("LBPolicy not set, use default value: order")
+		config.LBPolicy = "order"
+	}
+	if !config.LBPolicyValid() {
+		log.Fatalf("Unsupported LBPolicy '%s'", config.LBPolicy)
+	}
 
 	for i, upstream := range config.Upstreams {
 		// parse upstream endpoint URL
@@ -90,4 +98,8 @@ func ReadConfig(filepath string) Config {
 	}
 
 	return config
+}
+
+func (c *Config) LBPolicyValid() bool {
+	return c.LBPolicy == "order" || c.LBPolicy == "random"
 }
