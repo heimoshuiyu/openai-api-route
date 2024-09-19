@@ -71,11 +71,6 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 
 	for index, upstream := range avaliableUpstreams {
 		var err error
-		if upstream.SK == "" {
-			sendCORSHeaders(c)
-			c.AbortWithError(500, fmt.Errorf("[processRequest.begin]: invaild SK (secret key) '%s'", upstream.SK))
-			continue
-		}
 
 		shouldResponse := index == len(avaliableUpstreams)-1
 
