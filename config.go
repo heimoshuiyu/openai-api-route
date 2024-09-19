@@ -24,7 +24,6 @@ type Config struct {
 type CliConfig struct {
 	ConfigFile string
 	ListMode   bool
-	Noauth     bool
 	DBLog      bool
 }
 

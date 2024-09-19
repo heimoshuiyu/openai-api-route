@@ -46,7 +46,7 @@ func (o *OpenAIAPI) V1Handler(c *gin.Context) {
 	avaliableUpstreams := make([]OPENAI_UPSTREAM, 0)
 	for _, upstream := range config.Upstreams {
 		// noauth mode from cli arguments
-		if !o.Config.CliConfig.Noauth || upstream.Noauth {
+		if upstream.Noauth {
 			avaliableUpstreams = append(avaliableUpstreams, upstream)
 			continue
 		}

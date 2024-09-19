@@ -21,7 +21,6 @@ var config Config
 func main() {
 	configFile := flag.String("config", "./config.yaml", "Config file")
 	listMode := flag.Bool("list", false, "List all upstream")
-	noauth := flag.Bool("noauth", false, "Do not check incoming authorization header")
 	dbLog := flag.Bool("dblog", false, "Enable database log")
 	flag.Parse()
 
@@ -32,7 +31,6 @@ func main() {
 	config.CliConfig = CliConfig{
 		ConfigFile: *configFile,
 		ListMode:   *listMode,
-		Noauth:     *noauth,
 		DBLog:      *dbLog,
 	}
 	log.Println("[main]: Load upstreams number:", len(config.Upstreams))
